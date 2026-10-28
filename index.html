@@ -116,7 +116,8 @@ ul{margin:0;padding-left:1.2em;display:flex;flex-direction:column;gap:6px;font-s
         <tr><th>閣樓樓板</th><td class="v">RC 樓板 120 mm</td><td class="d">與大梁一起澆置於 +3.9 m，閣樓作收納與檢修；屋脊處淨高約 2.3 m（屋頂坡度加大後可站立行走）；閣樓兩側加 1.5 m 側牆（頂部圈梁）整體拉高，屋脊下淨高約 3.5 m、走道大部分可站立；屋架改為上弦＋2.3 m 高繫梁，不再擋走道；前山牆（退到露臺後方 z=12）改為日式玻璃拉門＋紗門，開門即可通風，不再設百葉；後山牆 3 組黑色鋁百葉（內側防蟲網）與前方拉門形成對流；按「屋頂」會一起顯示</td></tr>
         <tr><th>客廳挑高</th><td class="v">3 × 2 m</td><td class="d">取消原屋頂天窗與採光井，改在客廳中央上方開閣樓樓板（x 5.5–8.5、z 13.3–15.3）做挑高，四周護欄；前山牆的日式玻璃拉門讓陽光進入二樓，再從挑高灑進客廳</td></tr>
         <tr><th>欄間</th><td class="v">廚房隔牆上段</td><td class="d">餐廳與廚房之間新增隔牆，對齊 z=17 主體大梁（廚房門開在靠臥室4 側，寬 0.9 m），牆上 2.4 m 以上做日式木格＋霧面玻璃欄間；廚房後窗的光線可透進餐廳，油煙與聲音不直接進客廳；臥室與衛浴的隔牆維持實牆</td></tr>
-        <tr><th>室內配色</th><td class="v">淺色系</td><td class="d">白色天花、米白牆面、淺色亮面地磚、淺色木紋家具，讓挑高與窗戶的光線反射得更深入</td></tr>
+        <tr><th>地坪材料規劃</th><td class="v">米白磚＋淺橡木紋 SPC</td><td class="d">一樓客廳、餐廳、廚房、玄關與神明桌區：60×60 cm 米白拋光磁磚；四間臥室：SPC 石塑木紋地板（暫以淺橡木色示意）。衛浴、露臺維持原止滑磚規劃。尚未施工，品牌、型號、板片尺寸與實際樣品待選；基地位於河靜省宜春一帶、離海約5公里，經常開窗通風，已墊高且目前無返潮紀錄。採購前須核對產品容許溫濕度、日曬與熱穩定限制、當地保固；施工前量測基層含水，防潮層、底墊、伸縮縫及收邊依產品系統確認。</td></tr>
+        <tr><th>室內配色</th><td class="v">淺色系</td><td class="d">白色天花、米白牆面、米白拋光地磚、臥室淺橡木紋 SPC、淺色木紋家具，讓挑高與窗戶的光線反射得更深入</td></tr>
         <tr><th>v3 風水調整</th><td class="v">隔間與擺設</td><td class="d">臥室3 床頭改靠客廳側內牆、衣櫃靠神桌背牆；臥室1 床北移、衣櫃靠衛浴牆、側窗不在床頭；主臥化妝台改靠東牆（鏡不照床）、房門北移 0.9 m 不沖床；臥室4 床頭改靠西外牆、南牆衣櫃隔開戶外鋼梯；廚房後牆改為「水槽 → 備料 0.9 m → 三口爐 → 備餐」水火分開</td></tr>
         <tr><th>衣櫃</th><td class="v">奶油白木作</td><td class="d">四間臥室衣櫃統一為奶油白木作，高 2.4 m、深 60 cm，約 50 cm 一片門、香檳金直立把手、深米色踢腳板；臥室1 2.1 m、主臥 2 m、臥室3 2.3 m、臥室4 2.7 m</td></tr>
         <tr><th>入口</th><td class="v">雙開大門 1.6 m</td><td class="d">玄關門改雙開；門前 2.2 × 1.5 m 入口平台，左側 5 級台階（奇數，符合風水），台階前為一般前院地面；右側無障礙坡道（1:12、寬 1.2 m、兩側扶手）：由前院直上 2.6 m → 轉角平台 → 2.7 m → 迴轉平台 1.5 × 2.5 m → 沿正面牆 4.3 m 接入口平台，總長約 9.6 m，全部在住宅正面範圍內，不佔用側邊通道；玄關內上框平接無高差，輪椅可直接進入</td></tr>
@@ -1551,6 +1552,65 @@ box(9.555,12.89,15.055,16.945,FL,FL+0.012,mat.bathTile);
 box(4.61,6.89,10.11,11.89,FL,FL+0.012,mat.genkan);
 box(1.11,4.39,10.11,12.11,FL,FL+0.01,mat.tile);
 box(7.11,9.39,10.11,12.11,FL,FL+0.01,mat.tile); box(9.61,12.89,10.11,11.89,FL,FL+0.01,mat.tile);
+
+// 已確認的地坪規劃；圖紋為示意，不代表採購型號或施工厚度。
+function floorTexture(kind){
+  const c=document.createElement('canvas'); c.width=512; c.height=512;
+  const ctx=c.getContext('2d');
+  if(kind==='tile'){
+    ctx.fillStyle='#f2eee6'; ctx.fillRect(0,0,512,512);
+    // 一個重複單位為 600 mm；2 mm 淺灰米色磚縫。
+    ctx.strokeStyle='#c9c3b8'; ctx.lineWidth=512*0.002/0.6;
+    ctx.strokeRect(0,0,512,512);
+  }else{
+    // 四排錯縫淺橡木紋；單片示意 180 × 1200 mm，非產品規格。
+    let seed=20261028;
+    const rand=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
+    for(let row=0;row<4;row++){
+      ctx.fillStyle=['#d9c3a0','#d3ba94','#dfc9a8','#d6bf9c'][row];
+      ctx.fillRect(0,row*128,512,128);
+      for(let k=0;k<100;k++){
+        const y=row*128+rand()*128;
+        ctx.strokeStyle='rgba(115,83,48,'+(0.035+rand()*0.08)+')';
+        ctx.lineWidth=0.5+rand();
+        ctx.beginPath(); ctx.moveTo(0,y);
+        ctx.bezierCurveTo(170,y+rand()*5,340,y-rand()*5,512,y); ctx.stroke();
+      }
+      ctx.strokeStyle='rgba(116,91,59,.32)';ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(0,row*128);ctx.lineTo(512,row*128);
+      const joint=[0,256,128,384][row];
+      ctx.moveTo(joint,row*128);ctx.lineTo(joint,(row+1)*128);ctx.stroke();
+    }
+  }
+  const t=new THREE.CanvasTexture(c);
+  t.wrapS=t.wrapT=THREE.RepeatWrapping; t.encoding=THREE.sRGBEncoding;
+  t.anisotropy=Math.min(8,renderer.capabilities.getMaxAnisotropy());
+  return t;
+}
+const floorMaterials={
+  tile:M(0xFFFFFF,{map:floorTexture('tile'),roughness:.23,metalness:0}),
+  spc:M(0xFFFFFF,{map:floorTexture('spc'),roughness:.68,metalness:0})
+};
+function floorFinish(x0,x1,z0,z1,y,kind){
+  const g=new THREE.PlaneGeometry(x1-x0,z1-z0);g.rotateX(-Math.PI/2);
+  g.translate(-(x0+x1)/2,y,(z0+z1)/2);
+  const p=g.attributes.position,uv=g.attributes.uv;
+  const sx=kind==='tile'?0.6:1.2,sz=kind==='tile'?0.6:0.72;
+  for(let i=0;i<p.count;i++) uv.setXY(i,-p.getX(i)/sx,p.getZ(i)/sz);
+  uv.needsUpdate=true;
+  const mesh=new THREE.Mesh(g,floorMaterials[kind]);mesh.receiveShadow=true;
+  mesh.name='floor-'+kind;scene.add(mesh);return mesh;
+}
+
+floorFinish(1.11,12.89,12.11,21.89,FL+0.011,'tile');
+floorFinish(1.11,4.39,10.11,12.11,FL+0.011,'tile');
+floorFinish(7.11,9.39,10.11,12.11,FL+0.011,'tile');
+floorFinish(9.61,12.89,10.11,11.89,FL+0.011,'tile');
+floorFinish(4.61,6.89,10.11,11.89,FL+0.013,'tile');
+// 四間臥室依現有隔牆內緣分區，衛浴保留原材質。
+[[1.11,4.445,12.11,14.945],[9.555,12.89,12.11,14.945],
+ [1.11,4.445,17.055,21.89],[9.555,12.89,17.055,21.89]]
+ .forEach(([a,b,c,d])=>floorFinish(a,b,c,d,FL+0.013,'spc'));
 // 前後台階
 // 入口：入口平台＋左側 5 級台階（奇數）＋右側無障礙坡道（1:12，寬 1.2 m，三段，不佔用側邊通道）
 (function(){
