@@ -193,7 +193,7 @@ ul{margin:0;padding-left:1.2em;display:flex;flex-direction:column;gap:6px;font-s
         <tr><th>廚房</th><td class="v">L 型＋中島</td><td class="d">後牆：水槽（窗下）＋三口瓦斯爐＋排油煙機（原爐位窗戶取消）；中島往爐區靠近，與後牆檯面保持約 1.15 m 走道，兩人同時做菜可錯身；家電櫃（微波爐、氣炸鍋）、冰箱在側牆</td></tr>
         <tr><th>主臥室</th><td class="v">3.5 × 5 m・17.5㎡</td><td class="d">與臥室4 對調到右後角（離大門對角線最深處）；與衛浴之間的牆移到 z=17 結構大梁下切齊，房間多 1 m 深並加化妝台（鏡不照床）；專用衛浴往臥室3 推 0.5 m，為 3.5 × 2 m（淋浴區、馬桶、洗手台），臥室3 改為 3.5 × 3 m；雙人床 1.8 m 床頭靠外牆、窗在床側；2 m 衣櫃靠廚房側內牆；房門由廚房側進入、專用衛浴門在角落，兩扇門都不沖床；原公共衛浴改為主臥專用</td></tr>
         <tr><th>臥室1</th><td class="v">3.5 × 3 m・10.5㎡</td><td class="d">前段改為樓梯間，z=12 結構大梁下做實牆，牆上開 4 扇奶油白木門做「樓梯下收納」（取代衣櫃，深約 0.85 m、寬 2.4 m）；取消低檯度落地窗，側牆改一般窗（不在床頭）；單人床床頭靠外牆、與衛浴牆保持 1 m，書桌靠房門側牆</td></tr>
-        <tr><th>二樓露臺</th><td class="v">約 7.6 × 2 m（約 15㎡）</td><td class="d">玄關、客廳前段與神明廳上方：女兒牆 1.1 m＋紅瓦壓頂、防水止滑地磚（原強化玻璃改回地磚）；前排放 5 台冷氣室外機（出風朝內）；神桌正上方做花台不踩踏</td></tr>
+        <tr><th>二樓露臺</th><td class="v">約 7.6 × 2 m（約 15㎡）</td><td class="d">玄關、客廳前段與神明廳上方：女兒牆 1.1 m＋紅瓦壓頂、防水止滑地磚（原強化玻璃改回地磚）；前排放 5 台冷氣室外機，前方女兒牆改為 15 cm RC 止水矮牆＋1.1 m 鐵件欄杆（直欄杆淨距小於 10 cm），出風朝外直接穿過欄杆排出，背面離玻璃拉門約 1.2 m 進風；神桌正上方做花台不踩踏</td></tr>
         <tr><th>二樓樓梯間</th><td class="v">約 4.5 × 2 m</td><td class="d">臥室1 前段與玄關上方，平屋頂 +2.5 m；U 型梯上來後經後方開口進閣樓，再由日式玻璃拉門出露臺（取消木門，露臺只有一個出入口）；前牆一般窗採光</td></tr>
         <tr><th>水塔／馬達 A</th><td class="v">1000 L＋加壓馬達</td><td class="d">兩組都放在後院曬衣區左側（屋內朝後院看的左手邊＝青龍方），水塔在 40 cm RC 基座上、馬達加防雨罩；A 走埋地管沿後牆到右後的主臥衛浴，另一路接到果園前的澆灌水龍頭（藍色管）</td></tr>
         <tr><th>水塔／馬達 B</th><td class="v">1000 L＋加壓馬達</td><td class="d">與 A 並排，供左側公共衛浴、廚房水槽與後門洗衣機（橘色管）；水塔在地面，必須靠加壓馬達供水</td></tr>
@@ -1948,10 +1948,15 @@ const mCeil=M(0xF4F2EE,{side:THREE.DoubleSide});
   const R=roof;
   // 防水止滑地磚（露臺＋樓梯間）
   [[5.47,12.96,10.04,11.93],[4.39,5.32,10.04,11.93],[1.99,4.39,10.04,10.96]].forEach(([a,b,c,d])=>box(a,b,c,d,BT,BT+0.03,mTile,R));
-  // 女兒牆 1.1m＋紅瓦壓頂（樓梯間以外）
-  box(5.4,13.11,9.89,10.04,BT,BT+1.1,mPar,R); box(12.96,13.11,10.04,12.0,BT,BT+1.1,mPar,R);
-  box(5.47,13.16,9.84,10.09,BT+1.1,BT+1.15,mCop,R); box(12.91,13.16,10.09,12.0,BT+1.1,BT+1.15,mCop,R);
-  [[5.47,13.16,9.965,'x'],[13.035,10.09,12.0,'z']].forEach(([p,q,r_,ax])=>{
+  // 女兒牆 1.1m＋紅瓦壓頂：冷氣室外機前（x 5.4–10.0）改為 RC 止水矮牆 15cm＋鐵件欄杆，保持排風通暢
+  const RX0=5.47, RX1=10.0, mRail=M(0x3A3D40,{roughness:.45,metalness:.55});
+  box(5.4,RX1,9.89,10.04,BT,BT+0.15,mPar,R);                                         // 止水矮牆（防水收邊）
+  box(RX1,13.11,9.89,10.04,BT,BT+1.1,mPar,R); box(12.96,13.11,10.04,12.0,BT,BT+1.1,mPar,R);
+  box(RX1,13.16,9.84,10.09,BT+1.1,BT+1.15,mCop,R); box(12.91,13.16,10.09,12.0,BT+1.1,BT+1.15,mCop,R);
+  box(RX0,RX1,9.93,10.0,BT+1.05,BT+1.1,mRail,R); box(RX0,RX1,9.94,9.99,BT+0.18,BT+0.22,mRail,R);   // 扶手、下橫桿
+  for(let x=RX0+0.02;x<RX1;x+=1.13) box(x,x+0.05,9.94,9.99,BT+0.15,BT+1.05,mRail,R);              // 立柱 □50×50
+  for(let x=RX0+0.12;x<RX1-0.05;x+=0.11) box(x,x+0.016,9.955,9.975,BT+0.22,BT+1.05,mRail,R);     // 直欄杆 @110（淨距 <10cm）
+  [[RX1,13.16,9.965,'x'],[13.035,10.09,12.0,'z']].forEach(([p,q,r_,ax])=>{
     const L=ax==='x'?q-p:r_-q, c=new THREE.Mesh(new THREE.CylinderGeometry(0.08,0.08,L,12),mCop);
     if(ax==='x'){c.rotation.z=Math.PI/2; c.position.set(-(p+q)/2,BT+1.15,r_);} else {c.rotation.x=Math.PI/2; c.position.set(-p,BT+1.15,(q+r_)/2);}
     c.castShadow=true; R.add(c);});
@@ -1965,7 +1970,7 @@ const mCeil=M(0xF4F2EE,{side:THREE.DoubleSide});
   box(0.84,5.52,9.84,12.0,BT+SH,BT+SH+0.15,mPar,R); [[0.82,5.54,9.82,9.95],[0.82,0.95,9.95,12.0],[5.41,5.54,9.95,12.0]].forEach(([a,b,c,d])=>box(a,b,c,d,BT+SH+0.15,BT+SH+0.22,mCop,R));
   // 冷氣室外機 ×5（露臺前排，背靠女兒牆、出風朝內）
   function ac(x0,x1,z0,z1){box(x0,x1,z0,z1,BT+0.03,BT+0.12,mPipe,R); box(x0,x1,z0,z1,BT+0.12,BT+0.67,mAC,R);
-    const f=new THREE.Mesh(new THREE.CylinderGeometry(0.19,0.19,0.02,20),mFan); f.rotation.x=Math.PI/2; f.position.set(-(x0+x1)/2-0.12,BT+0.4,z1+0.01); R.add(f);}
+    const f=new THREE.Mesh(new THREE.CylinderGeometry(0.19,0.19,0.02,20),mFan); f.rotation.x=Math.PI/2; f.position.set(-(x0+x1)/2-0.12,BT+0.4,z0-0.01); R.add(f);}   // 出風朝欄杆（往外排）
   [5.65,6.5,7.35,8.2,9.05].forEach(x=>ac(x,x+0.78,10.35,10.65));
   // 神桌正上方做花台（不踩踏）
   box(10.0,12.6,11.0,11.9,BT+0.03,BT+0.45,mPar,R); box(10.05,12.55,11.05,11.85,BT+0.45,BT+0.5,mGreen,R);
