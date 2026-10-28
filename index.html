@@ -147,7 +147,7 @@ ul{margin:0;padding-left:1.2em;display:flex;flex-direction:column;gap:6px;font-s
         <tr><th>通氣窗</th><td class="v">大門、後門上方</td><td class="d">門頂上方加黑色鋁百葉通氣窗（大門 1.6 × 0.4 m、後門 0.8 × 0.4 m），內側加防蟲網，關門時也能對流</td></tr>
         <tr><th>臥室3／4</th><td class="v">10.5㎡／17.5㎡</td><td class="d">雙人床 1.4 m、衣櫃、書桌；臥室4 與主臥對調到左後，門由廚房側進入</td></tr>
         <tr><th>衛浴 ×2</th><td class="v">乾濕分離</td><td class="d">玻璃隔出蓮蓬頭淋浴區，馬桶與洗手台在乾區</td></tr>
-        <tr><th>室內樓梯</th><td class="v">U 型 RC 梯 22 階</td><td class="d">依風水移到玄關左側（原臥室1 前段）：由玄關左側牆前段開口起步，沿前牆往西 10 階 → 迴轉平台（上方高窗）→ 沿臥室1 牆往東 10 階到二樓；第二跑下方做臥室1 收納；級高約 17.7 cm、踏面 24 cm、寬 0.85 m，中央 RC 隔牆承托樓梯間樓板；外人無法從屋外爬上二樓</td></tr>
+        <tr><th>室內樓梯</th><td class="v">U 型 RC 梯 21 階（奇數）</td><td class="d">依風水移到玄關左側（原臥室1 前段）：由玄關左側牆前段開口起步，沿前牆往西 10 階 → 第 11 階上迴轉平台（上方高窗）→ 沿臥室1 牆往東 9 階，第 21 階踏上二樓；共 21 階（奇數，合風水）；第二跑下方做臥室1 收納；級高約 18.6 cm、踏面 24 cm、寬 0.85 m，中央 RC 隔牆承托樓梯間樓板；外人無法從屋外爬上二樓</td></tr>
       </table></div>
     </section>
     <section>
@@ -1978,9 +1978,9 @@ box(6.45,7.05,22.35,22.95,0,0.85,mat.fwhite); box(7.15,7.75,22.35,22.85,0,0.8,ma
 box(5.9,9.7,22.11,23.4,FL+2.75,FL+2.82,mat.metal);
 [[5.95,23.35],[9.65,23.35]].forEach(([x,z])=>box(x-0.03,x+0.03,22.11,z,FL+2.55,FL+2.6,mat.stairM));
 
-// 室內 U 型 RC 樓梯（玄關左側 → 二樓樓梯間，22 階）＋客廳挑高護欄
+// 室內 U 型 RC 樓梯（玄關左側 → 二樓樓梯間，21 階・奇數）＋客廳挑高護欄
 (function(){
-  const N=22, r=3.9/N, T=0.24, SB=M(0xE8E2D6,{roughness:.6}), TR=mat.fwood, RL=M(0x2B2C2E,{roughness:.4,metalness:.5});
+  const N=21, r=3.9/N, T=0.24, SB=M(0xE8E2D6,{roughness:.6}), TR=mat.fwood, RL=M(0x2B2C2E,{roughness:.4,metalness:.5});
   const XE=4.39, XL=1.99, XW=1.11, A0=10.11, A1=10.96, B0=11.04, B1=11.89, H=0.9;   // A：第一跑（靠前牆）、B：第二跑（靠臥室1，梯下收納）
   function rod(x0,y0,z0,x1,y1,z1,parent){const a=new THREE.Vector3(-x0,y0,z0), b=new THREE.Vector3(-x1,y1,z1), d=b.clone().sub(a);
     const m=new THREE.Mesh(new THREE.CylinderGeometry(0.02,0.02,d.length(),8),RL); m.position.copy(a.clone().add(b).multiplyScalar(.5));
@@ -1991,10 +1991,12 @@ box(5.9,9.7,22.11,23.4,FL+2.75,FL+2.82,mat.metal);
   for(let i=1;i<=10;i++){const x1=XE-(i-1)*T; box(x1-T,x1,A0,A1,FL+Math.max(0,i-2)*r,FL+i*r,SB); box(x1-T,x1+0.02,A0,A1,FL+i*r-0.025,FL+i*r+0.005,TR);}
   slabX(XE,FL,XL,FL+10*r,A0,A1);
   box(XW,XL,10.11,11.89,FL+11*r-0.15,FL+11*r,SB); box(XW,XL,10.11,11.89,FL+11*r-0.025,FL+11*r+0.005,TR);   // 迴轉平台
-  for(let i=12;i<=21;i++){const x0=XL+(i-12)*T; box(x0,x0+T,B0,B1,FL+(i-2)*r,FL+i*r,SB); box(x0-0.02,x0+T,B0,B1,FL+i*r-0.025,FL+i*r+0.005,TR);}
-  slabX(XL,FL+11*r,XE,FL+21*r,B0,B1);
-  rod(XE,FL+r+H,A1-0.04,XL,FL+10*r+H,A1-0.04); rod(XL,FL+12*r+H,B0+0.04,XE,FL+21*r+H,B0+0.04);
-  [[XE,A1-0.04,FL+r],[XL,A1-0.04,FL+10*r],[XL,B0+0.04,FL+12*r],[XE,B0+0.04,FL+21*r]].forEach(([x,z,y])=>rod(x,y-0.3,z,x,y+H,z));
+  const XL2=XE-9*T;                                                       // 第二跑 9 個踏面，平台在第二跑側加深到 XL2
+  box(XL,XL2,B0,B1,FL+11*r-0.15,FL+11*r,SB); box(XL,XL2,B0,B1,FL+11*r-0.025,FL+11*r+0.005,TR);
+  for(let i=12;i<=20;i++){const x0=XL2+(i-12)*T; box(x0,x0+T,B0,B1,FL+(i-2)*r,FL+i*r,SB); box(x0-0.02,x0+T,B0,B1,FL+i*r-0.025,FL+i*r+0.005,TR);}   // 第 21 階踏上二樓樓板
+  slabX(XL2,FL+11*r,XE,FL+20*r,B0,B1);
+  rod(XE,FL+r+H,A1-0.04,XL,FL+10*r+H,A1-0.04); rod(XL2,FL+12*r+H,B0+0.04,XE,FL+20*r+H,B0+0.04);
+  [[XE,A1-0.04,FL+r],[XL,A1-0.04,FL+10*r],[XL2,B0+0.04,FL+12*r],[XE,B0+0.04,FL+20*r]].forEach(([x,z,y])=>rod(x,y-0.3,z,x,y+H,z));
   // 二樓樓梯口護欄
   const g=new THREE.Group(); roof.add(g);
   rod(XL,BT+H,11.0,XE,BT+H,11.0,g); rod(XL,BT+H,10.04,XL,BT+H,11.0,g);
