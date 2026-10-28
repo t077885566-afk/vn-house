@@ -97,6 +97,7 @@ ul{margin:0;padding-left:1.2em;display:flex;flex-direction:column;gap:6px;font-s
       <button id="t-struct" data-i18n="柱梁標示" aria-pressed="true">柱梁標示</button>
       <button id="t-furn" data-i18n="家具" aria-pressed="true">家具</button>
       <button id="t-sun" aria-pressed="false">日照：下午</button>
+      <button id="t-materials" aria-pressed="true" data-i18n="細緻材質">細緻材質</button>
       <button id="t-night" data-i18n="夜間燈光" aria-pressed="false">夜間燈光</button>
       <button id="t-labels" data-i18n="空間標籤" aria-pressed="true">空間標籤</button>
     </div>
@@ -105,7 +106,7 @@ ul{margin:0;padding-left:1.2em;display:flex;flex-direction:column;gap:6px;font-s
   <div class="grid">
     <section>
       <h2>客廳・餐廚 無印風材料方案</h2>
-      <p class="note">暖米白牆 #EDE8DE・柔白天花 #F7F5EF・米白磚 #F2EEE6・淺橡木 #CDB38B・奶油白櫃 #E8E3D8・暖灰白檯面 #DEDAD1・防濺牆 #E5E0D6・燕麥沙發 #C9BEAB・亞麻簾 #E3DCCF・柔霧黑 #30312E。木紋與織紋為渲染示意，非採購色票。近看請按「客廳材質／餐廚材質」，再切換夜間燈光比較。</p>
+      <p class="note">暖米白牆 #EDE8DE・柔白天花 #F7F5EF・米白磚 #F2EEE6・淺橡木 #CDB38B・奶油白櫃 #E8E3D8・暖灰白檯面 #DEDAD1・防濺牆 #E5E0D6・燕麥沙發 #C9BEAB・亞麻簾 #E3DCCF・柔霧黑 #30312E。木紋與織紋為渲染示意，非採購色票。第一輪材質升級加入木紋、織紋、微凹凸與表面反光差異；皆為原創程序式素材，維持原配色，非指定品牌。近看請按「客廳材質／餐廚材質」，以「細緻材質」開關比較，再切換夜間燈光。</p>
       <h2>v2 格局重點</h2>
       <p class="note">柱網、外牆與屋頂沿用 v1；室內隔間與家具依日式一戶建重新配置。</p>
       <div class="tw"><table>
@@ -1561,6 +1562,71 @@ box(4.61,6.89,10.11,11.89,FL,FL+0.012,mat.genkan);
 box(1.11,4.39,10.11,12.11,FL,FL+0.01,mat.tile);
 box(7.11,9.39,10.11,12.11,FL,FL+0.01,mat.tile); box(9.61,12.89,10.11,11.89,FL,FL+0.01,mat.tile);
 
+// 第一輪材質：本專案原創、週期連續的色彩／粗糙度／高度貼圖。
+// 全部由固定種子生成，無外部素材授權、下載或離線相依問題。
+const surfaceCache=new Map();
+function physicalSurface(kind){
+  if(surfaceCache.has(kind))return surfaceCache.get(kind);
+  const size=256, canvases=Array.from({length:3},()=>{const c=document.createElement('canvas');c.width=c.height=size;return c;});
+  const contexts=canvases.map(c=>c.getContext('2d'));
+  const images=contexts.map(c=>c.createImageData(size,size));
+  // 週期式多頻訊號確保 RepeatWrapping 的相鄰邊連續。
+  const tau=Math.PI*2, clamp=v=>Math.max(0,Math.min(255,Math.round(v)));
+  for(let y=0;y<size;y++)for(let x=0;x<size;x++){
+    const u=x/size,v=y/size;
+    const fine=(Math.sin(tau*(37*u+29*v))+.55*Math.cos(tau*(71*u-53*v)))/1.55;
+    const cloud=(Math.sin(tau*(2*u+v))+.5*Math.cos(tau*(3*v-u)))/1.5;
+    let color=250,height=128,rough=230;
+    if(kind==='oak'){
+      const bend=.1*Math.sin(tau*v)+.035*Math.sin(3*tau*v);
+      const grain=Math.sin(tau*(19*u+bend))+.35*Math.sin(tau*(53*u+2*bend));
+      color=244+7*grain+2*cloud;height=128+12*grain+2*fine;rough=204+13*grain;
+    }else if(kind==='linen'){
+      const weave=Math.cos(tau*64*u)*Math.cos(tau*64*v);
+      color=244+8*weave+2*fine;height=128+30*weave;rough=245+6*weave;
+    }else if(kind==='stone'){
+      color=250+3*cloud+2*fine;height=128+3*fine;rough=206+10*cloud+4*fine;
+    }else if(kind==='plaster'){
+      color=252+2*cloud+fine;height=128+7*fine+2*cloud;rough=242+5*fine;
+    }else if(kind==='tile'){
+      // 一張圖為 600mm 方磚，2mm 縫；色彩仍使用既有 #F2EEE6 地磚圖。
+      const edge=Math.min(u,1-u,v,1-v),grout=edge<.002/.6/2;
+      color=252+2*cloud; height=grout?88:128+fine;rough=grout?245:194+6*cloud;
+    }
+    [color,rough,height].forEach((value,k)=>{const i=(y*size+x)*4;images[k].data[i]=images[k].data[i+1]=images[k].data[i+2]=clamp(value);images[k].data[i+3]=255;});
+  }
+  const maps=canvases.map((c,i)=>{
+    contexts[i].putImageData(images[i],0,0);const t=new THREE.CanvasTexture(c);
+    t.wrapS=t.wrapT=THREE.RepeatWrapping;
+    // 只有色彩圖使用 sRGB；粗糙度與高度是線性資料。
+    t.encoding=i===0?THREE.sRGBEncoding:THREE.LinearEncoding;
+    t.anisotropy=Math.min(4,renderer.capabilities.getMaxAnisotropy());return t;
+  });
+  const result={color:maps[0],roughness:maps[1],height:maps[2]};surfaceCache.set(kind,result);return result;
+}
+function physicalMaterial(material,kind,bumpScale,scale){
+  const maps=physicalSurface(kind);
+  material.map=maps.color;material.roughnessMap=maps.roughness;
+  material.bumpMap=maps.height;material.bumpScale=bumpScale;
+  material.userData.surfaceScale=scale;material.needsUpdate=true;return material;
+}
+// BoxGeometry 六面依公尺尺寸映射，避免大櫃與小椅腳被拉成同一張紋理。
+function physicalBoxUV(mesh){
+  const material=mesh.material,scale=material.userData&&material.userData.surfaceScale;
+  if(!scale||mesh.geometry.type!=='BoxGeometry')return;
+  const g=mesh.geometry,p=g.attributes.position,n=g.attributes.normal,uv=g.attributes.uv;
+  const width=g.parameters.width,depth=g.parameters.depth;
+  for(let i=0;i<p.count;i++){
+    let u,v;
+    if(Math.abs(n.getY(i))>.5){
+      // 桌面木紋沿長邊；其餘表面同樣維持實際紋理密度。
+      u=width>=depth?p.getZ(i):p.getX(i);v=width>=depth?p.getX(i):p.getZ(i);
+    }else{u=Math.abs(n.getX(i))>.5?p.getZ(i):p.getX(i);v=p.getY(i);}
+    uv.setXY(i,u/scale[0],v/scale[1]);
+  }
+  uv.needsUpdate=true;
+}
+
 // 已確認的地坪規劃；圖紋為示意，不代表採購型號或施工厚度。
 function floorTexture(kind){
   const c=document.createElement('canvas'); c.width=512; c.height=512;
@@ -1599,6 +1665,11 @@ const floorMaterials={
   tile:M(0xFFFFFF,{map:floorTexture('tile'),roughness:.23,metalness:0}),
   spc:M(0xFFFFFF,{map:floorTexture('spc'),roughness:.68,metalness:0})
 };
+// 保留原有磚色與600mm格線；加入細緻微凹凸及磚縫粗糙度差異。
+const tileSurface=physicalSurface('tile');
+floorMaterials.tile.roughness=.27;
+floorMaterials.tile.roughnessMap=tileSurface.roughness;
+floorMaterials.tile.bumpMap=tileSurface.height;floorMaterials.tile.bumpScale=.0006;
 function floorFinish(x0,x1,z0,z1,y,kind){
   const g=new THREE.PlaneGeometry(x1-x0,z1-z0);g.rotateX(-Math.PI/2);
   g.translate(-(x0+x1)/2,y,(z0+z1)/2);
@@ -1946,29 +2017,7 @@ function wardrobe(x0,x1,z0,z1,face){
 const MUJI={wall:0xEDE8DE,ceiling:0xF7F5EF,oak:0xCDB38B,
   cream:0xE8E3D8,stone:0xDEDAD1,splash:0xE5E0D6,
   fabric:0xC9BEAB,linen:0xE3DCCF,black:0x30312E};
-function mujiTexture(kind){
-  const cv=document.createElement('canvas');cv.width=cv.height=256;
-  const c=cv.getContext('2d');let seed=417;
-  const random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
-  c.fillStyle='#ffffff';c.fillRect(0,0,256,256);
-  if(kind==='oak'){
-    for(let i=0;i<230;i++){
-      const y=random()*256;c.strokeStyle='rgba(104,76,40,'+(0.04+random()*0.12)+')';c.lineWidth=.4+random();
-      c.beginPath();c.moveTo(0,y);c.bezierCurveTo(80,y+random()*6,180,y-random()*6,256,y);c.stroke();
-    }
-  }else if(kind==='linen'){
-    c.lineWidth=1;
-    for(let i=0;i<256;i+=4){
-      c.strokeStyle='rgba(96,84,65,.12)';c.beginPath();c.moveTo(i,0);c.lineTo(i,256);c.stroke();
-      c.strokeStyle='rgba(255,255,255,.8)';c.beginPath();c.moveTo(0,i);c.lineTo(256,i);c.stroke();
-    }
-  }else{
-    for(let i=0;i<6000;i++){const v=210+Math.floor(random()*45);c.fillStyle='rgb('+v+','+v+','+v+')';c.fillRect(random()*256,random()*256,1,1);}
-  }
-  const tex=new THREE.CanvasTexture(cv);tex.wrapS=tex.wrapT=THREE.RepeatWrapping;
-  tex.encoding=THREE.sRGBEncoding;tex.anisotropy=Math.min(8,renderer.capabilities.getMaxAnisotropy());
-  return tex;
-}
+function mujiTexture(kind){return physicalSurface(kind).color;}
 const muji={
   oak:M(MUJI.oak,{map:mujiTexture('oak'),roughness:.68}),
   fabric:M(MUJI.fabric,{map:mujiTexture('linen'),roughness:.94}),
@@ -1977,6 +2026,13 @@ const muji={
   splash:M(MUJI.splash,{roughness:.75}),wall:M(MUJI.wall,{roughness:.93}),
   ceiling:M(MUJI.ceiling,{roughness:.95}),black:M(MUJI.black,{roughness:.55,metalness:.15})
 };
+physicalMaterial(muji.oak,'oak',.0008,[.6,1.8]);
+physicalMaterial(muji.fabric,'linen',.0012,[.24,.24]);
+physicalMaterial(muji.linen,'linen',.0008,[.24,.24]);
+physicalMaterial(muji.stone,'stone',.00025,[.6,.6]);
+physicalMaterial(muji.wall,'plaster',.0006,[.8,.8]);
+physicalMaterial(muji.ceiling,'plaster',.0003,[.8,.8]);
+physicalMaterial(muji.splash,'stone',.0002,[.6,.6]);
 // 套用至客廳／餐廚家具；臥室、神桌與樓梯的材料不變。
 function mujiFurniture(x0,x1,z0,z1,h0,h1,m){
   const x=(x0+x1)/2,z=(z0+z1)/2;
@@ -2124,7 +2180,7 @@ for(let z=34;z<=42.01;z+=2) box(10.95,11.05,z-0.05,z+0.05,0,1.8,mat.wood);
 
 // 標籤
 const labels=new THREE.Group(); scene.add(labels);
-const VI={"客廳材質":"Vật liệu phòng khách","餐廚材質":"Vật liệu bếp","夜間燈光": "Đèn ban đêm", "二樓軌道燈": "Đèn ray tầng 2", "樓梯下收納（臥室1）": "Kho dưới cầu thang (P.ngủ 1)", "後院水塔": "Bồn nước sân sau", "加壓馬達 A／B（青龍方）": "Bơm tăng áp A/B (hướng Thanh Long)", "室內樓梯（往二樓）": "Cầu thang trong (lên tầng 2)", "二樓樓梯間": "Buồng thang tầng 2", "客廳挑高": "Thông tầng phòng khách", "日式玻璃拉門＋紗門": "Cửa lùa kính kiểu Nhật + cửa lưới", "閣樓水塔": "Bồn nước áp mái", "水塔A 1000L（主臥衛浴＋後院澆灌）": "Bồn A 1000L (WC P.ngủ chính + tưới vườn)", "水塔B 1000L（客衛浴＋廚房＋洗衣機）": "Bồn B 1000L (WC chung + bếp + máy giặt)", "加壓馬達A": "Bơm tăng áp A", "加壓馬達B": "Bơm tăng áp B", "吊掛鋼樑（吊水塔上露臺）": "Dầm thép tời (kéo bồn lên sân thượng)", "閣樓側牆加高 1.5m": "Tường áp mái nâng 1,5m", "後院澆灌水龍頭": "Vòi tưới vườn sau", "露臺雙開門 1.4m": "Cửa đôi ra sân thượng 1,4m", "二樓露臺": "Sân thượng tầng 2", "大門雨遮": "Mái che cửa chính", "冷氣室外機 ×5": "Dàn nóng điều hòa ×5", "強化玻璃導光": "Kính cường lực lấy sáng", "花台（神桌正上方）": "Bồn hoa (ngay trên bàn thờ)", "露臺門": "Cửa ra sân thượng", "屋頂結構": "Kết cấu mái", "C 鋼屋架 C150×50 @1.5m": "Vì kèo thép C150×50 @1,5m", "C 鋼檁條 C100×50 @0.8m": "Xà gồ thép C100×50 @0,8m", "臥室1（單人）": "Phòng ngủ 1 (đơn)", "主臥衛浴": "WC phòng ngủ chính", "主臥室": "Phòng ngủ chính", "客廳": "Phòng khách", "餐廳": "Phòng ăn", "廚房": "Bếp", "臥室3": "Phòng ngủ 3", "公共衛浴": "WC chung", "臥室4": "Phòng ngủ 4", "玄關": "Sảnh vào", "緣側": "Hiên", "神桌區": "Khu thờ", "神明廳": "Phòng thờ", "室內樓梯": "Cầu thang trong", "室內樓梯（往閣樓）": "Cầu thang trong (lên áp mái)", "後門雨遮": "Mái che cửa sau", "餐桌": "Bàn ăn", "木拉門": "Cửa trượt gỗ", "前院": "Sân trước", "側邊通道": "Lối đi hông", "曬衣區": "Khu phơi đồ", "果園": "Vườn cây ăn quả", "雞舍": "Chuồng gà", "放養區": "Sân thả gà", "道路": "Đường", "大門 6m": "Cổng 6m", "汽車位": "Chỗ đậu ô tô", "機車棚": "Nhà xe máy", "洗衣區": "Khu giặt", "戶外鋼梯": "Cầu thang thép", "轉折平台 +2.07m": "Chiếu nghỉ +2,07m", "檢修平台 +4.70m": "Sàn kiểm tra +4,70m", "側邊深屋簷": "Mái hiên hông", "後院延伸屋頂": "Mái sân sau", "柱 220×220": "Cột 220×220", "外牆 220": "Tường ngoài 220", "內牆 110": "Tường trong 110", "大梁 220×400": "Dầm 220×400", "鋼柱 100×100 @4m": "Cột thép 100×100 @4m", "端部鋼桁架": "Vì kèo thép", "視角": "Góc nhìn", "顯示": "Hiển thị", "單指旋轉・雙指縮放／平移": "1 ngón: xoay · 2 ngón: phóng to / di chuyển", "全區鳥瞰": "Toàn khu", "住宅近看": "Cận cảnh nhà", "正面": "Mặt trước", "後側樓梯": "Cầu thang sau", "後院": "Sân sau", "俯視（同 Google 地圖方位）": "Nhìn từ trên (theo Google Maps)", "屋頂": "Mái", "屋頂琉璃瓦": "Mái ngói men", "掛瓦條 li tô @0.32m": "Li tô @0,32m", "入口平台": "Sảnh trước", "天井採光": "Giếng trời", "客廳室內": "Trong phòng khách", "欄間（木格霧玻璃）": "Ô thoáng gỗ + kính mờ", "廚房門": "Cửa bếp", "無障礙坡道 1:12": "Dốc xe lăn 1:12", "雙開大門": "Cửa đôi", "柱梁標示": "Cột dầm", "家具": "Nội thất", "空間標籤": "Nhãn phòng", "標籤": "Nhãn", "日照：": "Nắng: ", "上午": "sáng", "中午": "trưa", "下午": "chiều"};
+const VI={"細緻材質":"Chi tiết vật liệu","客廳材質":"Vật liệu phòng khách","餐廚材質":"Vật liệu bếp","夜間燈光": "Đèn ban đêm", "二樓軌道燈": "Đèn ray tầng 2", "樓梯下收納（臥室1）": "Kho dưới cầu thang (P.ngủ 1)", "後院水塔": "Bồn nước sân sau", "加壓馬達 A／B（青龍方）": "Bơm tăng áp A/B (hướng Thanh Long)", "室內樓梯（往二樓）": "Cầu thang trong (lên tầng 2)", "二樓樓梯間": "Buồng thang tầng 2", "客廳挑高": "Thông tầng phòng khách", "日式玻璃拉門＋紗門": "Cửa lùa kính kiểu Nhật + cửa lưới", "閣樓水塔": "Bồn nước áp mái", "水塔A 1000L（主臥衛浴＋後院澆灌）": "Bồn A 1000L (WC P.ngủ chính + tưới vườn)", "水塔B 1000L（客衛浴＋廚房＋洗衣機）": "Bồn B 1000L (WC chung + bếp + máy giặt)", "加壓馬達A": "Bơm tăng áp A", "加壓馬達B": "Bơm tăng áp B", "吊掛鋼樑（吊水塔上露臺）": "Dầm thép tời (kéo bồn lên sân thượng)", "閣樓側牆加高 1.5m": "Tường áp mái nâng 1,5m", "後院澆灌水龍頭": "Vòi tưới vườn sau", "露臺雙開門 1.4m": "Cửa đôi ra sân thượng 1,4m", "二樓露臺": "Sân thượng tầng 2", "大門雨遮": "Mái che cửa chính", "冷氣室外機 ×5": "Dàn nóng điều hòa ×5", "強化玻璃導光": "Kính cường lực lấy sáng", "花台（神桌正上方）": "Bồn hoa (ngay trên bàn thờ)", "露臺門": "Cửa ra sân thượng", "屋頂結構": "Kết cấu mái", "C 鋼屋架 C150×50 @1.5m": "Vì kèo thép C150×50 @1,5m", "C 鋼檁條 C100×50 @0.8m": "Xà gồ thép C100×50 @0,8m", "臥室1（單人）": "Phòng ngủ 1 (đơn)", "主臥衛浴": "WC phòng ngủ chính", "主臥室": "Phòng ngủ chính", "客廳": "Phòng khách", "餐廳": "Phòng ăn", "廚房": "Bếp", "臥室3": "Phòng ngủ 3", "公共衛浴": "WC chung", "臥室4": "Phòng ngủ 4", "玄關": "Sảnh vào", "緣側": "Hiên", "神桌區": "Khu thờ", "神明廳": "Phòng thờ", "室內樓梯": "Cầu thang trong", "室內樓梯（往閣樓）": "Cầu thang trong (lên áp mái)", "後門雨遮": "Mái che cửa sau", "餐桌": "Bàn ăn", "木拉門": "Cửa trượt gỗ", "前院": "Sân trước", "側邊通道": "Lối đi hông", "曬衣區": "Khu phơi đồ", "果園": "Vườn cây ăn quả", "雞舍": "Chuồng gà", "放養區": "Sân thả gà", "道路": "Đường", "大門 6m": "Cổng 6m", "汽車位": "Chỗ đậu ô tô", "機車棚": "Nhà xe máy", "洗衣區": "Khu giặt", "戶外鋼梯": "Cầu thang thép", "轉折平台 +2.07m": "Chiếu nghỉ +2,07m", "檢修平台 +4.70m": "Sàn kiểm tra +4,70m", "側邊深屋簷": "Mái hiên hông", "後院延伸屋頂": "Mái sân sau", "柱 220×220": "Cột 220×220", "外牆 220": "Tường ngoài 220", "內牆 110": "Tường trong 110", "大梁 220×400": "Dầm 220×400", "鋼柱 100×100 @4m": "Cột thép 100×100 @4m", "端部鋼桁架": "Vì kèo thép", "視角": "Góc nhìn", "顯示": "Hiển thị", "單指旋轉・雙指縮放／平移": "1 ngón: xoay · 2 ngón: phóng to / di chuyển", "全區鳥瞰": "Toàn khu", "住宅近看": "Cận cảnh nhà", "正面": "Mặt trước", "後側樓梯": "Cầu thang sau", "後院": "Sân sau", "俯視（同 Google 地圖方位）": "Nhìn từ trên (theo Google Maps)", "屋頂": "Mái", "屋頂琉璃瓦": "Mái ngói men", "掛瓦條 li tô @0.32m": "Li tô @0,32m", "入口平台": "Sảnh trước", "天井採光": "Giếng trời", "客廳室內": "Trong phòng khách", "欄間（木格霧玻璃）": "Ô thoáng gỗ + kính mờ", "廚房門": "Cửa bếp", "無障礙坡道 1:12": "Dốc xe lăn 1:12", "雙開大門": "Cửa đôi", "柱梁標示": "Cột dầm", "家具": "Nội thất", "空間標籤": "Nhãn phòng", "標籤": "Nhãn", "日照：": "Nắng: ", "上午": "sáng", "中午": "trưa", "下午": "chiều"};
 let LANG='zh';
 try{const v=localStorage.getItem('vn-house-lang'); if(v) LANG=v;}catch(e){}
 function tr(t){return LANG==='vi'?(VI[t]||t):t;}
@@ -2347,6 +2403,23 @@ toggle('t-furn',on=>{furn.visible=on;});
 toggle('t-night',on=>setNight(on));
 (function(){const order=['am','noon','pm']; let i=2; const b=document.getElementById('t-sun');
   window.__sunKey='pm'; b.addEventListener('click',()=>{i=(i+1)%3; setSun(order[i]); window.__sunKey=order[i]; applyLang();});})();
+// 幾何尺寸不變；只更新客廳／餐廚的貼圖座標。
+scene.traverse(mesh=>{
+  if(!mesh.isMesh||Array.isArray(mesh.material))return;
+  physicalBoxUV(mesh);
+});
+const detailMaterials=[floorMaterials.tile,...new Set(Object.values(muji))];
+const detailState=detailMaterials.map(material=>({material,map:material.map,
+  roughnessMap:material.roughnessMap,bumpMap:material.bumpMap,bumpScale:material.bumpScale}));
+toggle('t-materials',on=>{
+  detailState.forEach(s=>{
+    // 關閉仍保留600mm地磚及既定色號；只停用細節圖。
+    s.material.map=on?s.map:(s.material===floorMaterials.tile?s.map:null);
+    s.material.roughnessMap=on?s.roughnessMap:null;
+    s.material.bumpMap=on?s.bumpMap:null;s.material.bumpScale=on?s.bumpScale:0;
+    s.material.needsUpdate=true;
+  });
+});
 applyLang();
 const needle=document.getElementById('needle'), NORTH=dirOf(0);
 const _a=new THREE.Vector3(), _b=new THREE.Vector3();
