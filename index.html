@@ -2,6 +2,63 @@
 <html lang="zh-Hant">
 <head>
 <meta charset="utf-8">
+<script id="page-update-check">
+// 比對已部署頁面的程式／樣式；離線時保留目前模型，不刪除語言偏好等資料。
+(function(){
+  'use strict';
+  function fingerprint(doc){
+    const parts=Array.from(doc.querySelectorAll('script,style,link[rel="stylesheet"],title')).map(node=>{
+      if(node.tagName==='LINK')return 'LINK:'+node.getAttribute('href');
+      return node.tagName+':'+(node.getAttribute('src')||node.textContent);
+    }).join('\n');
+    // 雙32位雜湊供版本比對，非安全或內容真偽驗證。
+    let a=2166136261,b=2246822519;
+    for(let i=0;i<parts.length;i++){const c=parts.charCodeAt(i);a=Math.imul(a^c,16777619);b=Math.imul(b^c,3266489917);}
+    return (a>>>0).toString(16).padStart(8,'0')+(b>>>0).toString(16).padStart(8,'0');
+  }
+  function start(){
+    const status=document.getElementById('update-status'),button=document.getElementById('check-update');
+    if(!status||!button)return;
+    if(!/^https?:$/.test(location.protocol)){status.textContent='本機預覽（不檢查線上更新）';button.disabled=true;return;}
+    const loaded=fingerprint(document);let busy=false,lastCheck=0;
+    status.textContent='版本 '+loaded.slice(0,8);
+    function latestURL(revision){
+      const url=new URL(location.href);url.searchParams.set('_refresh',String(Date.now()));
+      if(revision)url.searchParams.set('_rev',revision);return url;
+    }
+    async function check(manual){
+      if(busy||(!manual&&Date.now()-lastCheck<30000))return;
+      busy=true;lastCheck=Date.now();button.disabled=true;status.textContent='檢查更新中…';
+      const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),8000);
+      try{
+        const response=await fetch(latestURL(),{cache:'no-store',credentials:'same-origin',signal:controller.signal});
+        if(!response.ok)throw new Error('HTTP '+response.status);
+        const html=await response.text();const remote=new DOMParser().parseFromString(html,'text/html');
+        // 防止網路錯誤頁、登入頁等內容導致重新載入。
+        if(!remote.getElementById('viewer')||!remote.getElementById('page-update-check'))throw new Error('Not an application page');
+        const newest=fingerprint(remote);
+        if(newest!==loaded){
+          if(new URL(location.href).searchParams.get('_rev')===newest&&!manual){
+            status.textContent='仍取得舊頁面，請按檢查更新重試';return;
+          }
+          status.textContent='發現新版，正在重新載入…';location.replace(latestURL(newest).href);return;
+        }
+        // 手動檢查也重新請求頁面，包含純HTML文案變更；不增加瀏覽紀錄。
+        if(manual){status.textContent='正在載入最新頁面…';location.replace(latestURL(newest).href);return;}
+        status.textContent='已是最新版本 · '+loaded.slice(0,8);
+      }catch(error){status.textContent='暫時無法檢查更新，仍可使用目前版本';}
+      finally{clearTimeout(timer);busy=false;button.disabled=false;}
+    }
+    button.addEventListener('click',()=>check(true));
+    window.addEventListener('pageshow',event=>{if(event.persisted){lastCheck=0;check(false);}});
+    document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')check(false);});
+    window.addEventListener('online',()=>{lastCheck=0;check(false);});
+    check(false);
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
+})();
+</script>
+
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <style>html{color-scheme:light}:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px system-ui,-apple-system,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
 </head>
@@ -60,6 +117,10 @@ ul{margin:0;padding-left:1.2em;display:flex;flex-direction:column;gap:6px;font-s
 <div class="wrap">
   <header>
     <h1>越南鄉村住宅 3D 示意 v2</h1>
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:8px">
+      <button id="check-update" type="button">檢查更新</button>
+      <span id="update-status" role="status" aria-live="polite" class="note" style="margin:0">準備檢查版本…</span>
+    </div>
     <p class="sub">日式一戶建格局＋家具配置・基地 15 × 50 m・一層樓 RC 構架＋磚牆・結構尺寸為初步建議，待結構技師計算確認</p>
   </header>
 
