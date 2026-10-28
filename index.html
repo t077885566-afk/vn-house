@@ -82,6 +82,8 @@ ul{margin:0;padding-left:1.2em;display:flex;flex-direction:column;gap:6px;font-s
       <button id="v-front" data-i18n="正面" data-view="front" aria-pressed="false">正面</button>
       <button id="v-stair" data-i18n="室內樓梯" data-view="stair" aria-pressed="false">室內樓梯</button>
       <button id="v-altar" data-i18n="神明廳" data-view="altar" aria-pressed="false">神明廳</button>
+      <button data-view="mujiLiving" aria-pressed="false" data-i18n="客廳材質">客廳材質</button>
+      <button data-view="mujiKitchen" aria-pressed="false" data-i18n="餐廚材質">餐廚材質</button>
       <button id="v-living" data-i18n="客廳室內" data-view="living" aria-pressed="false">客廳室內</button>
       <button id="v-terrace" data-i18n="二樓露臺" data-view="terrace" aria-pressed="false">二樓露臺</button>
       <button id="v-tanks" data-i18n="後院水塔" data-view="tanks" aria-pressed="false">後院水塔</button>
@@ -102,6 +104,8 @@ ul{margin:0;padding-left:1.2em;display:flex;flex-direction:column;gap:6px;font-s
 
   <div class="grid">
     <section>
+      <h2>客廳・餐廚 無印風材料方案</h2>
+      <p class="note">暖米白牆 #EDE8DE・柔白天花 #F7F5EF・米白磚 #F2EEE6・淺橡木 #CDB38B・奶油白櫃 #E8E3D8・暖灰白檯面 #DEDAD1・防濺牆 #E5E0D6・燕麥沙發 #C9BEAB・亞麻簾 #E3DCCF・柔霧黑 #30312E。木紋與織紋為渲染示意，非採購色票。近看請按「客廳材質／餐廚材質」，再切換夜間燈光比較。</p>
       <h2>v2 格局重點</h2>
       <p class="note">柱網、外牆與屋頂沿用 v1；室內隔間與家具依日式一戶建重新配置。</p>
       <div class="tw"><table>
@@ -134,8 +138,8 @@ ul{margin:0;padding-left:1.2em;display:flex;flex-direction:column;gap:6px;font-s
         <tr><th>大門雨遮</th><td class="v">外挑 1.5 m</td><td class="d">二樓樓板在大門上方往前外挑 1.5 m、寬 2.5 m，蓋住入口平台；邊緣做擋水反樑與滴水線</td></tr>
         <tr><th>燈光計畫</th><td class="v">照度／色溫</td><td class="d">
 估算：所需光通量 ≈ 照度 × 面積 ÷ 0.5（利用率×維護率），天花高 3.5 m 以上燈頭選 24–36° 光束角<br>
-客廳 25㎡・300–400 lx・3500–4000K：軌道燈 2 條×5 頭（各約 1,200 lm）＋崁燈 ×4（各 800 lm）＋挑高吊燈 1,500 lm，共約 16,700 lm ≈ 330 lx<br>
-餐廚 25㎡・300 lx（中島工作面 500 lx）・3500–4000K：中島軌道燈 5 頭＋崁燈 ×6＋吊櫃下燈帶＋餐桌吊燈（2700–3000K），約 13,800 lm<br>
+客廳 25㎡・300–400 lx・3000K：軌道燈 2 條×5 頭（各約 1,200 lm）＋崁燈 ×4（各 800 lm）＋挑高吊燈 1,500 lm，共約 16,700 lm ≈ 330 lx<br>
+餐廚 25㎡・300 lx（中島工作面 500 lx）・3500K：中島軌道燈 5 頭＋崁燈 ×6＋吊櫃下燈帶＋餐桌吊燈（2700–3000K），約 13,800 lm<br>
 玄關 4.5㎡・150–200 lx・3500K：軌道燈 2 頭＋鞋櫃下感應燈帶，約 1,700 lm<br>
 神明廳 7㎡・200 lx（供桌 400 lx）・2700K：軌道燈 3 頭打供桌＋崁燈 1 盞，約 2,900 lm<br>
 臥室1／3 10.5㎡・150–200 lx・2700–3000K：軌道燈 4 頭（各約 700 lm）＋床頭壁燈 ×2，約 3,400 lm，可調光<br>
@@ -1477,6 +1481,9 @@ const renderer=new THREE.WebGLRenderer({antialias:true});
 renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
 renderer.shadowMap.enabled=true;
 renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+renderer.outputEncoding=THREE.sRGBEncoding;
+renderer.toneMapping=THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure=1.05;
 viewer.appendChild(renderer.domElement);
 const labelR=new THREE.CSS2DRenderer();
 labelR.domElement.className='labels';
@@ -1505,6 +1512,7 @@ function setSun(k){const v=SUN[k], d=dirOf(v.b).multiplyScalar(Math.cos(v.e*Math
 setSun('pm');
 sun.castShadow=true; sun.shadow.mapSize.set(2048,2048);
 Object.assign(sun.shadow.camera,{left:-32,right:32,top:32,bottom:-32,near:1,far:90});
+sun.shadow.normalBias=0.025;
 scene.add(sun); scene.add(sun.target);
 
 // 平面座標 (x: 0–15 由左至右, z: 0–50 由路往後) → three 座標 x 取負，讓從路面看時左右正確
@@ -1886,7 +1894,7 @@ roof.visible=false;
 
 // 家具
 const furn=new THREE.Group(); scene.add(furn);
-const F=(x0,x1,z0,z1,h0,h1,m)=>box(x0,x1,z0,z1,FL+h0,FL+h1,m,furn);
+const F=(x0,x1,z0,z1,h0,h1,m)=>mujiFurniture(x0,x1,z0,z1,h0,h1,m);
 function cyl(x,z,r,h0,h1,m){const c=new THREE.Mesh(new THREE.CylinderGeometry(r,r,h1-h0,18),m); c.position.set(-x,FL+(h0+h1)/2,z); c.castShadow=true; furn.add(c); return c;}
 function bed(x0,x1,z0,z1,head){
   F(x0,x1,z0,z1,0,0.3,mat.fwood); F(x0+0.03,x1-0.03,z0+0.03,z1-0.03,0.3,0.52,mat.bedding);
@@ -1925,6 +1933,53 @@ function wardrobe(x0,x1,z0,z1,face){
     if(alongX) F(hp-0.008,hp+0.008,h0,h1,0.9,1.3,mPull); else F(h0,h1,hp-0.008,hp+0.008,0.9,1.3,mPull);
   }
 }
+// 客廳／餐廚：已確認的無印風配色，程序式貼圖不依賴外部服務。
+const MUJI={wall:0xEDE8DE,ceiling:0xF7F5EF,oak:0xCDB38B,
+  cream:0xE8E3D8,stone:0xDEDAD1,splash:0xE5E0D6,
+  fabric:0xC9BEAB,linen:0xE3DCCF,black:0x30312E};
+function mujiTexture(kind){
+  const cv=document.createElement('canvas');cv.width=cv.height=256;
+  const c=cv.getContext('2d');let seed=417;
+  const random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
+  c.fillStyle='#ffffff';c.fillRect(0,0,256,256);
+  if(kind==='oak'){
+    for(let i=0;i<230;i++){
+      const y=random()*256;c.strokeStyle='rgba(104,76,40,'+(0.04+random()*0.12)+')';c.lineWidth=.4+random();
+      c.beginPath();c.moveTo(0,y);c.bezierCurveTo(80,y+random()*6,180,y-random()*6,256,y);c.stroke();
+    }
+  }else if(kind==='linen'){
+    c.lineWidth=1;
+    for(let i=0;i<256;i+=4){
+      c.strokeStyle='rgba(96,84,65,.12)';c.beginPath();c.moveTo(i,0);c.lineTo(i,256);c.stroke();
+      c.strokeStyle='rgba(255,255,255,.8)';c.beginPath();c.moveTo(0,i);c.lineTo(256,i);c.stroke();
+    }
+  }else{
+    for(let i=0;i<6000;i++){const v=210+Math.floor(random()*45);c.fillStyle='rgb('+v+','+v+','+v+')';c.fillRect(random()*256,random()*256,1,1);}
+  }
+  const tex=new THREE.CanvasTexture(cv);tex.wrapS=tex.wrapT=THREE.RepeatWrapping;
+  tex.encoding=THREE.sRGBEncoding;tex.anisotropy=Math.min(8,renderer.capabilities.getMaxAnisotropy());
+  return tex;
+}
+const muji={
+  oak:M(MUJI.oak,{map:mujiTexture('oak'),roughness:.68}),
+  fabric:M(MUJI.fabric,{map:mujiTexture('linen'),roughness:.94}),
+  linen:M(MUJI.linen,{map:mujiTexture('linen'),roughness:.95,side:THREE.DoubleSide}),
+  cream:M(MUJI.cream,{roughness:.82}),stone:M(MUJI.stone,{map:mujiTexture('stone'),roughness:.45}),
+  splash:M(MUJI.splash,{roughness:.75}),wall:M(MUJI.wall,{roughness:.93}),
+  ceiling:M(MUJI.ceiling,{roughness:.95}),black:M(MUJI.black,{roughness:.55,metalness:.15})
+};
+// 套用至客廳／餐廚家具；臥室、神桌與樓梯的材料不變。
+function mujiFurniture(x0,x1,z0,z1,h0,h1,m){
+  const x=(x0+x1)/2,z=(z0+z1)/2;
+  if(x>4.5&&x<9.5&&z>=12&&z<=22){
+    if(m===mat.fwood)m=muji.oak;
+    else if(m===mat.fabric||m===mat.pillow)m=muji.fabric;
+    else if(m===mat.fwhite)m=muji.cream;
+    else if(m===mat.counter)m=muji.stone;
+    else if(m===mat.dark)m=muji.black;
+  }
+  return box(x0,x1,z0,z1,FL+h0,FL+h1,m,furn);
+}
 // 玄關
 F(6.53,6.88,10.25,11.85,0,1.0,mat.fwood);
 // 神桌區：祖先供桌 197×81×127cm，背靠住宅前牆、面向前院
@@ -1958,12 +2013,31 @@ F(5.7,7.3,17.1,17.4,0,0.45,mat.fwood);   // 靠牆長凳
 F(4.56,5.16,19.05,19.75,0,1.8,mat.steel);
 F(4.56,5.16,19.75,20.65,0,2.1,mat.fwhite);
 F(5.16,5.19,19.87,20.37,1.25,1.55,mat.dark); F(5.16,5.19,19.93,20.27,0.9,1.2,mat.bike);
-F(4.56,5.16,20.65,21.89,0,0.85,mat.counter); F(5.16,8.4,21.29,21.89,0,0.85,mat.counter);
+F(4.56,5.16,20.65,21.89,0,0.81,muji.oak); F(5.16,8.4,21.29,21.89,0,0.81,muji.oak);
+F(4.56,5.16,20.65,21.89,0.81,0.85,muji.stone); F(5.16,8.4,21.29,21.89,0.81,0.85,muji.stone);
+// 左側上櫃／防濺牆避開後牆窗、爐具與排油煙機。
+F(4.56,4.91,20.65,21.25,1.55,2.25,muji.cream);
+F(4.562,4.578,20.65,21.25,0.85,1.55,muji.splash);
+// 櫃門細縫與內縮踢腳，保持既有廚具及走道尺寸。
+[5.7,6.24,6.78,7.32,7.86].forEach(x=>F(x-.004,x+.004,21.285,21.296,.12,.79,muji.splash));
+F(5.18,8.38,21.29,21.34,0,.1,muji.black);
 F(5.65,6.4,21.36,21.84,0.85,0.87,mat.dark);
 [[5.85,21.62],[6.2,21.62],[6.02,21.47]].forEach(([x,z])=>cyl(x,z,0.07,0.87,0.9,mat.steel));
 F(5.55,6.5,21.3,21.89,1.9,2.35,mat.steel); F(5.85,6.2,21.55,21.89,2.35,3.3,mat.steel);   // 三口瓦斯爐＋排油煙機（後牆）
 F(7.3,7.95,21.4,21.8,0.85,0.856,mat.steel); cyl(7.62,21.82,0.02,0.85,1.15,mat.steel);   // 後牆水槽（窗下）
-F(6.3,8.3,19.24,20.14,0,0.9,mat.counter); F(7.05,7.75,19.39,19.99,0.9,0.905,mat.steel); cyl(7.4,20.06,0.02,0.9,1.2,mat.steel);
+F(6.3,8.3,19.24,20.14,0,0.86,muji.oak);
+F(6.3,8.3,19.24,20.14,0.86,0.9,muji.stone);
+[6.8,7.3,7.8].forEach(x=>F(x-.004,x+.004,19.235,19.247,.12,.84,muji.splash)); F(7.05,7.75,19.39,19.99,0.9,0.905,mat.steel); cyl(7.4,20.06,0.02,0.9,1.2,mat.steel);
+// 客廳前窗兩側亞麻簾，保留中間採光與既有窗框。
+[7.28,9.12].forEach(x=>{
+  for(let i=0;i<5;i++)F(x+i*.022,x+i*.022+.025,10.16+(i%2)*.025,10.19+(i%2)*.025,.05,2.47,muji.linen);
+});
+// 客廳／餐廚相鄰牆面以暖米白處理，不變更隔牆幾何。
+scene.children.forEach(mesh=>{
+  if(!mesh.isMesh||![mat.wall,mat.iwall].includes(mesh.material))return;
+  const x=-mesh.position.x,z=mesh.position.z;
+  if((x>=4.4&&x<=9.6&&z>=12&&z<=22)||(z<10.12&&x>7.1&&x<9.4))mesh.material=muji.wall;
+});
 // 臥室3
 wardrobe(10.55,12.89,12.11,12.71,'+z'); bed(9.56,11.56,13.25,14.65,'x0'); table(12.39,12.89,13.0,14.2,0.74); chair(12.1,13.6);   // v3 ②③
 // 主臥專用衛浴（右，原公共衛浴）
@@ -2041,7 +2115,7 @@ for(let z=34;z<=42.01;z+=2) box(10.95,11.05,z-0.05,z+0.05,0,1.8,mat.wood);
 
 // 標籤
 const labels=new THREE.Group(); scene.add(labels);
-const VI={"夜間燈光": "Đèn ban đêm", "二樓軌道燈": "Đèn ray tầng 2", "樓梯下收納（臥室1）": "Kho dưới cầu thang (P.ngủ 1)", "後院水塔": "Bồn nước sân sau", "加壓馬達 A／B（青龍方）": "Bơm tăng áp A/B (hướng Thanh Long)", "室內樓梯（往二樓）": "Cầu thang trong (lên tầng 2)", "二樓樓梯間": "Buồng thang tầng 2", "客廳挑高": "Thông tầng phòng khách", "日式玻璃拉門＋紗門": "Cửa lùa kính kiểu Nhật + cửa lưới", "閣樓水塔": "Bồn nước áp mái", "水塔A 1000L（主臥衛浴＋後院澆灌）": "Bồn A 1000L (WC P.ngủ chính + tưới vườn)", "水塔B 1000L（客衛浴＋廚房＋洗衣機）": "Bồn B 1000L (WC chung + bếp + máy giặt)", "加壓馬達A": "Bơm tăng áp A", "加壓馬達B": "Bơm tăng áp B", "吊掛鋼樑（吊水塔上露臺）": "Dầm thép tời (kéo bồn lên sân thượng)", "閣樓側牆加高 1.5m": "Tường áp mái nâng 1,5m", "後院澆灌水龍頭": "Vòi tưới vườn sau", "露臺雙開門 1.4m": "Cửa đôi ra sân thượng 1,4m", "二樓露臺": "Sân thượng tầng 2", "大門雨遮": "Mái che cửa chính", "冷氣室外機 ×5": "Dàn nóng điều hòa ×5", "強化玻璃導光": "Kính cường lực lấy sáng", "花台（神桌正上方）": "Bồn hoa (ngay trên bàn thờ)", "露臺門": "Cửa ra sân thượng", "屋頂結構": "Kết cấu mái", "C 鋼屋架 C150×50 @1.5m": "Vì kèo thép C150×50 @1,5m", "C 鋼檁條 C100×50 @0.8m": "Xà gồ thép C100×50 @0,8m", "臥室1（單人）": "Phòng ngủ 1 (đơn)", "主臥衛浴": "WC phòng ngủ chính", "主臥室": "Phòng ngủ chính", "客廳": "Phòng khách", "餐廳": "Phòng ăn", "廚房": "Bếp", "臥室3": "Phòng ngủ 3", "公共衛浴": "WC chung", "臥室4": "Phòng ngủ 4", "玄關": "Sảnh vào", "緣側": "Hiên", "神桌區": "Khu thờ", "神明廳": "Phòng thờ", "室內樓梯": "Cầu thang trong", "室內樓梯（往閣樓）": "Cầu thang trong (lên áp mái)", "後門雨遮": "Mái che cửa sau", "餐桌": "Bàn ăn", "木拉門": "Cửa trượt gỗ", "前院": "Sân trước", "側邊通道": "Lối đi hông", "曬衣區": "Khu phơi đồ", "果園": "Vườn cây ăn quả", "雞舍": "Chuồng gà", "放養區": "Sân thả gà", "道路": "Đường", "大門 6m": "Cổng 6m", "汽車位": "Chỗ đậu ô tô", "機車棚": "Nhà xe máy", "洗衣區": "Khu giặt", "戶外鋼梯": "Cầu thang thép", "轉折平台 +2.07m": "Chiếu nghỉ +2,07m", "檢修平台 +4.70m": "Sàn kiểm tra +4,70m", "側邊深屋簷": "Mái hiên hông", "後院延伸屋頂": "Mái sân sau", "柱 220×220": "Cột 220×220", "外牆 220": "Tường ngoài 220", "內牆 110": "Tường trong 110", "大梁 220×400": "Dầm 220×400", "鋼柱 100×100 @4m": "Cột thép 100×100 @4m", "端部鋼桁架": "Vì kèo thép", "視角": "Góc nhìn", "顯示": "Hiển thị", "單指旋轉・雙指縮放／平移": "1 ngón: xoay · 2 ngón: phóng to / di chuyển", "全區鳥瞰": "Toàn khu", "住宅近看": "Cận cảnh nhà", "正面": "Mặt trước", "後側樓梯": "Cầu thang sau", "後院": "Sân sau", "俯視（同 Google 地圖方位）": "Nhìn từ trên (theo Google Maps)", "屋頂": "Mái", "屋頂琉璃瓦": "Mái ngói men", "掛瓦條 li tô @0.32m": "Li tô @0,32m", "入口平台": "Sảnh trước", "天井採光": "Giếng trời", "客廳室內": "Trong phòng khách", "欄間（木格霧玻璃）": "Ô thoáng gỗ + kính mờ", "廚房門": "Cửa bếp", "無障礙坡道 1:12": "Dốc xe lăn 1:12", "雙開大門": "Cửa đôi", "柱梁標示": "Cột dầm", "家具": "Nội thất", "空間標籤": "Nhãn phòng", "標籤": "Nhãn", "日照：": "Nắng: ", "上午": "sáng", "中午": "trưa", "下午": "chiều"};
+const VI={"客廳材質":"Vật liệu phòng khách","餐廚材質":"Vật liệu bếp","夜間燈光": "Đèn ban đêm", "二樓軌道燈": "Đèn ray tầng 2", "樓梯下收納（臥室1）": "Kho dưới cầu thang (P.ngủ 1)", "後院水塔": "Bồn nước sân sau", "加壓馬達 A／B（青龍方）": "Bơm tăng áp A/B (hướng Thanh Long)", "室內樓梯（往二樓）": "Cầu thang trong (lên tầng 2)", "二樓樓梯間": "Buồng thang tầng 2", "客廳挑高": "Thông tầng phòng khách", "日式玻璃拉門＋紗門": "Cửa lùa kính kiểu Nhật + cửa lưới", "閣樓水塔": "Bồn nước áp mái", "水塔A 1000L（主臥衛浴＋後院澆灌）": "Bồn A 1000L (WC P.ngủ chính + tưới vườn)", "水塔B 1000L（客衛浴＋廚房＋洗衣機）": "Bồn B 1000L (WC chung + bếp + máy giặt)", "加壓馬達A": "Bơm tăng áp A", "加壓馬達B": "Bơm tăng áp B", "吊掛鋼樑（吊水塔上露臺）": "Dầm thép tời (kéo bồn lên sân thượng)", "閣樓側牆加高 1.5m": "Tường áp mái nâng 1,5m", "後院澆灌水龍頭": "Vòi tưới vườn sau", "露臺雙開門 1.4m": "Cửa đôi ra sân thượng 1,4m", "二樓露臺": "Sân thượng tầng 2", "大門雨遮": "Mái che cửa chính", "冷氣室外機 ×5": "Dàn nóng điều hòa ×5", "強化玻璃導光": "Kính cường lực lấy sáng", "花台（神桌正上方）": "Bồn hoa (ngay trên bàn thờ)", "露臺門": "Cửa ra sân thượng", "屋頂結構": "Kết cấu mái", "C 鋼屋架 C150×50 @1.5m": "Vì kèo thép C150×50 @1,5m", "C 鋼檁條 C100×50 @0.8m": "Xà gồ thép C100×50 @0,8m", "臥室1（單人）": "Phòng ngủ 1 (đơn)", "主臥衛浴": "WC phòng ngủ chính", "主臥室": "Phòng ngủ chính", "客廳": "Phòng khách", "餐廳": "Phòng ăn", "廚房": "Bếp", "臥室3": "Phòng ngủ 3", "公共衛浴": "WC chung", "臥室4": "Phòng ngủ 4", "玄關": "Sảnh vào", "緣側": "Hiên", "神桌區": "Khu thờ", "神明廳": "Phòng thờ", "室內樓梯": "Cầu thang trong", "室內樓梯（往閣樓）": "Cầu thang trong (lên áp mái)", "後門雨遮": "Mái che cửa sau", "餐桌": "Bàn ăn", "木拉門": "Cửa trượt gỗ", "前院": "Sân trước", "側邊通道": "Lối đi hông", "曬衣區": "Khu phơi đồ", "果園": "Vườn cây ăn quả", "雞舍": "Chuồng gà", "放養區": "Sân thả gà", "道路": "Đường", "大門 6m": "Cổng 6m", "汽車位": "Chỗ đậu ô tô", "機車棚": "Nhà xe máy", "洗衣區": "Khu giặt", "戶外鋼梯": "Cầu thang thép", "轉折平台 +2.07m": "Chiếu nghỉ +2,07m", "檢修平台 +4.70m": "Sàn kiểm tra +4,70m", "側邊深屋簷": "Mái hiên hông", "後院延伸屋頂": "Mái sân sau", "柱 220×220": "Cột 220×220", "外牆 220": "Tường ngoài 220", "內牆 110": "Tường trong 110", "大梁 220×400": "Dầm 220×400", "鋼柱 100×100 @4m": "Cột thép 100×100 @4m", "端部鋼桁架": "Vì kèo thép", "視角": "Góc nhìn", "顯示": "Hiển thị", "單指旋轉・雙指縮放／平移": "1 ngón: xoay · 2 ngón: phóng to / di chuyển", "全區鳥瞰": "Toàn khu", "住宅近看": "Cận cảnh nhà", "正面": "Mặt trước", "後側樓梯": "Cầu thang sau", "後院": "Sân sau", "俯視（同 Google 地圖方位）": "Nhìn từ trên (theo Google Maps)", "屋頂": "Mái", "屋頂琉璃瓦": "Mái ngói men", "掛瓦條 li tô @0.32m": "Li tô @0,32m", "入口平台": "Sảnh trước", "天井採光": "Giếng trời", "客廳室內": "Trong phòng khách", "欄間（木格霧玻璃）": "Ô thoáng gỗ + kính mờ", "廚房門": "Cửa bếp", "無障礙坡道 1:12": "Dốc xe lăn 1:12", "雙開大門": "Cửa đôi", "柱梁標示": "Cột dầm", "家具": "Nội thất", "空間標籤": "Nhãn phòng", "標籤": "Nhãn", "日照：": "Nắng: ", "上午": "sáng", "中午": "trưa", "下午": "chiều"};
 let LANG='zh';
 try{const v=localStorage.getItem('vn-house-lang'); if(v) LANG=v;}catch(e){}
 function tr(t){return LANG==='vi'?(VI[t]||t):t;}
@@ -2166,6 +2240,8 @@ const CT_WARM=0xFFC98E, CT_NEU=0xFFE9D2, CT_ALTAR=0xFFB070;   // 約 2700K／380
       if(alongZ){h.rotation.z=a; f.rotation.z=a; f.position.set(-x-(k%2?0.035:-0.035),y-0.235,z);} else {h.rotation.x=a; f.rotation.x=a; f.position.set(-x,y-0.235,z+(k%2?0.035:-0.035));}
       P.add(h); P.add(f);}
   }
+  const strip=box(4.84,4.89,20.69,21.21,FL+1.525,FL+1.54,mLampN);
+  lamp(5.0,20.95,FL+1.45,scene,0xFFE1BE,.22,2.3);
   const yC=BT-0.13;                                                  // 一樓天花（閣樓樓板底）
   // —— 一樓軌道燈 ——
   track(5.15,12.4,5.15,16.6,yC,5,scene,mLampN); track(8.95,12.4,8.95,16.6,yC,5,scene,mLampN);   // 客廳 ×2（避開挑高）
@@ -2177,13 +2253,13 @@ const CT_WARM=0xFFC98E, CT_NEU=0xFFE9D2, CT_ALTAR=0xFFB070;   // 約 2700K／380
   // 衛浴防水崁燈＋主臥間接燈帶示意
   [[2.2,15.6],[3.4,15.6],[2.8,16.5]].forEach(([x,z])=>disc(x,z,0.09,mLampN)); [[10.4,15.5],[11.4,15.5],[11.0,16.5]].forEach(([x,z])=>disc(x,z,0.09,mLampN));
   disc(1.6,11.0,0.1,mLamp);                                                                        // 樓梯平台
-  pendant(7.0,14.3,FL+3.0,BT+2.3,mLampN);                                                          // 客廳挑高吊燈
+  pendant(7.0,14.3,FL+3.0,BT+2.3,mLamp);                                                          // 客廳挑高吊燈
   [[6.0,12.7],[8.0,12.7],[6.0,15.9],[8.0,15.9]].forEach(([x,z])=>disc(x,z,0.08,mLampN));                // 客廳崁燈 ×4
   [[5.4,18.4],[8.6,18.4],[5.4,21.0],[7.0,21.0],[8.6,21.0],[7.0,18.4]].forEach(([x,z])=>disc(x,z,0.08,mLampN));   // 餐廚崁燈 ×6
   pendant(6.5,18.0,FL+2.0,yC,mLamp);                                                               // 餐桌吊燈
   // —— 照明區域光（點光源合併，手機也順；無陰影）——
-  lamp(7.0,12.9,BT-0.6,scene,CT_NEU,1.0,8.5); lamp(7.0,15.9,BT-0.6,scene,CT_NEU,1.0,8.5);     // 客廳 約 350 lx
-  lamp(7.0,19.6,BT-0.6,scene,CT_NEU,1.25,8.5);                                                    // 餐廚
+  lamp(7.0,12.9,BT-0.6,scene,0xFFD6A8,1.0,8.5); lamp(7.0,15.9,BT-0.6,scene,0xFFD6A8,1.0,8.5);     // 客廳 約 350 lx
+  lamp(7.0,19.6,BT-0.6,scene,0xFFE1BE,1.25,8.5);                                                    // 餐廚
   lamp(2.75,13.3,BT-0.6,scene,CT_WARM,1.05,6.5); lamp(11.25,13.4,BT-0.6,scene,CT_WARM,1.05,6.5); // 臥室1、臥室3（含衛浴）
   lamp(2.75,19.4,BT-0.6,scene,CT_WARM,1.1,7);   lamp(11.25,19.4,BT-0.6,scene,CT_WARM,1.1,7);    // 臥室4、主臥
   lamp(11.25,11.0,BT-0.6,scene,CT_ALTAR,0.9,5); lamp(4.0,11.0,BT-0.6,scene,CT_NEU,0.9,5.5);      // 神明廳、玄關＋樓梯
@@ -2196,6 +2272,18 @@ const CT_WARM=0xFFC98E, CT_NEU=0xFFE9D2, CT_ALTAR=0xFFB070;   // 約 2700K／380
   const wl=new THREE.Mesh(new THREE.BoxGeometry(0.14,0.22,0.08),mLamp); wl.position.set(-9.25,BT+2.0,11.94); rs.add(wl); lamp(5.5,11.4,BT+2.1,rs,CT_WARM,0.85,6);
   const tl=label('二樓軌道燈',7.0,17.5,BT+2.55); tl.userData.rs=true;
 })();
+// 客廳燈具發光面與 3000K 區域光一致。
+scene.children.forEach(mesh=>{
+  if(mesh.isMesh&&mesh.material===mLampN&&-mesh.position.x>4.5&&-mesh.position.x<9.5&&mesh.position.z>12&&mesh.position.z<17)mesh.material=mLamp;
+});
+rs.traverse(mesh=>{
+  if(!mesh.isMesh||!mesh.geometry||mesh.geometry.type!=='BoxGeometry')return;
+  const b=new THREE.Box3().setFromObject(mesh);
+  if(b.min.y>BT-.25&&b.max.y<BT+.1&&b.min.x<-4.5&&b.max.x>-9.5&&b.max.z>12&&b.min.z<22){
+    const original=mesh.material;
+    if(!Array.isArray(original)){mesh.material=Array(6).fill(original);mesh.material[3]=muji.ceiling;}
+  }
+});
 let nightOn=false;
 function setNight(on){nightOn=on; window.__night=on;
   hemi.intensity=on?0.16:0.75; hemi.color.setHex(on?0x7F93C9:0xFFFFFF); hemi.groundColor.setHex(on?0x1A1C24:0x8A8670);
@@ -2205,6 +2293,8 @@ function setNight(on){nightOn=on; window.__night=on;
 
 // 視角
 const views={
+  mujiLiving:{p:[-8.7,2.5,16.4],t:[-6.8,1.5,13.3]},
+  mujiKitchen:{p:[-8.9,2.65,17.5],t:[-6.7,1.55,20.8]},
   all:{p:[8,32,-13],t:[-7.5,0,22]},
   house:{p:[2.5,15,6],t:[-7,0.5,17]},
   front:{p:[-5,3.2,1.5],t:[-7,2,13]},
@@ -2226,6 +2316,11 @@ function go(name,instant){
 document.querySelectorAll('[data-view]').forEach(b=>b.addEventListener('click',()=>{
   document.querySelectorAll('[data-view]').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));
   go(b.dataset.view);
+  if(b.dataset.view==='mujiLiving'||b.dataset.view==='mujiKitchen'){
+    rsOn=false;roofOn=false;
+    ['t-roof','t-rstruct'].forEach(id=>document.getElementById(id).setAttribute('aria-pressed','false'));
+    syncRoof();
+  }
   if(b.dataset.view==='living'||b.dataset.view==='terrace'){const r=document.getElementById('t-roof'); if(r.getAttribute('aria-pressed')!=='true') r.click();}
 }));
 function toggle(id,fn){const b=document.getElementById(id); b.addEventListener('click',()=>{const on=b.getAttribute('aria-pressed')!=='true'; b.setAttribute('aria-pressed',String(on)); fn(on);});}
