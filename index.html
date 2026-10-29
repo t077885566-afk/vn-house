@@ -2590,7 +2590,7 @@ function canStand(x,z,y){
   return [[0,0],[radius,0],[-radius,0],[0,radius],[0,-radius]].every(([a,b])=>supportedHeight(x+a,z+b,y)!==null);
 }
 function walkCamera(){camera.position.set(walk.x,walk.y+1.6,walk.z);camera.rotation.order='YXZ';camera.rotation.set(walk.pitch,walk.yaw,0);controls.target.copy(camera.position).add(new THREE.Vector3(0,0,-1).applyQuaternion(camera.quaternion));}
-function clearWalkInput(){walk.keys.clear();walk.stick.x=walk.stick.y=0;walk.last=0;}
+function clearWalkInput(){if(typeof walkMouseDrag!=='undefined')walkMouseDrag=null;walk.keys.clear();walk.stick.x=walk.stick.y=0;walk.last=0;}
 function resetWalk(){clearWalkInput();Object.assign(walk,{x:-5.75,z:11.4,y:FL+.015,yaw:Math.PI,pitch:0});walkCamera();}
 function enterWalk(){
   if(walk.active)return;
@@ -2622,9 +2622,9 @@ function setWalkHelp(){
 function bindWalkPointer(el,move){let id=null,start=null,last=null;
  const cancel=()=>{id=null;start=last=null;if(move)walk.stick.x=walk.stick.y=0;};
  window.addEventListener('blur',cancel);document.addEventListener('visibilitychange',cancel);
- el.addEventListener('pointerdown',e=>{if(!walk.active||id!==null||e.button>0)return;e.preventDefault();id=e.pointerId;start=last={x:e.clientX,y:e.clientY};el.setPointerCapture(id);});
+ el.addEventListener('pointerdown',e=>{if(!walk.active||e.pointerType==='mouse'||id!==null||e.button>0)return;e.preventDefault();id=e.pointerId;start=last={x:e.clientX,y:e.clientY};el.setPointerCapture(id);});
  el.addEventListener('pointermove',e=>{
-   if(!walk.active)return;
+   if(!walk.active||e.pointerType==='mouse')return;
    if(e.pointerId!==id)return;e.preventDefault();
    if(move){walk.stick.x=Math.max(-1,Math.min(1,(e.clientX-start.x)/35));walk.stick.y=Math.max(-1,Math.min(1,(e.clientY-start.y)/35));}
    else turnWalk(e.clientX-last.x,e.clientY-last.y,e.pointerType==='mouse'?.009:.004);
@@ -2633,6 +2633,23 @@ function bindWalkPointer(el,move){let id=null,start=null,last=null;
  const stop=e=>{if(e.pointerId===id)cancel();};['pointerup','pointercancel','lostpointercapture'].forEach(t=>el.addEventListener(t,stop));
 }
 bindWalkPointer(movePad,true);bindWalkPointer(lookPad,false);bindWalkPointer(renderer.domElement,false);
+// Mouse look is independent of touch pointer ownership and keyboard order.
+let walkMouseDrag=null;
+renderer.domElement.addEventListener('mousedown',e=>{
+  if(!walk.active||e.button!==0)return;
+  e.preventDefault();
+  walkMouseDrag={x:e.clientX,y:e.clientY};
+});
+document.addEventListener('mousemove',e=>{
+  if(!walk.active||!walkMouseDrag)return;
+  if(e.buttons!==undefined&&(e.buttons&1)===0){walkMouseDrag=null;return;}
+  e.preventDefault();
+  turnWalk(e.clientX-walkMouseDrag.x,e.clientY-walkMouseDrag.y,.009);
+  walkMouseDrag={x:e.clientX,y:e.clientY};
+});
+window.addEventListener('mouseup',e=>{if(e.button===0)walkMouseDrag=null;});
+window.addEventListener('blur',()=>{walkMouseDrag=null;});
+document.addEventListener('visibilitychange',()=>{walkMouseDrag=null;});
 function updateWalk(now){
  const dt=walk.last?Math.min((now-walk.last)/1000,.05):0;walk.last=now;
  const pressed=(a,b)=>walk.keys.has(a)||walk.keys.has(b);
