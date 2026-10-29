@@ -11,14 +11,16 @@ for(let z=10.5;z<=11.5;z+=.02){const h=t.supportedHeight(-1.4,z,y);assert(h!==nu
 for(let x=1.4;x<=4.7;x+=.02){const h=t.supportedHeight(-x,11.5,y);assert(h!==null,'upper flight support '+x);assert(t.canStand(-x,11.5,h),'upper flight body '+x);y=h;}assert(y>4.6);for(let x=4.7;x>=1.4;x-=.02){const h=t.supportedHeight(-x,11.5,y);assert(h!==null);assert(t.canStand(-x,11.5,h));y=h;}
 for(let z=11.5;z>=10.5;z-=.02){const h=t.supportedHeight(-1.4,z,y);assert(h!==null);assert(t.canStand(-1.4,z,h));y=h;}
 for(let x=1.4;x<=4.3;x+=.02){const h=t.supportedHeight(-x,10.5,y);assert(h!==null);assert(t.canStand(-x,10.5,h));y=h;}assert(y<1.1);assert(!t.canStand(-7,14.3,4.7),'void blocked');
-// Mouse look requires a held left button and permits repeated large turns.
-let yaw=t.walk.yaw;t.renderer.domElement.fire('pointermove',{pointerType:'mouse',pointerId:3,clientX:400,clientY:50});assert.equal(t.walk.yaw,yaw);
-t.renderer.domElement.fire('pointerdown',{pointerType:'mouse',pointerId:3,button:0,clientX:0,clientY:50});
-t.renderer.domElement.fire('pointermove',{pointerType:'mouse',pointerId:3,clientX:350,clientY:50});assert(Math.abs((yaw-t.walk.yaw)-3.15)<1e-9);
-t.renderer.domElement.fire('pointerup',{pointerId:3});yaw=t.walk.yaw;
-t.renderer.domElement.fire('pointermove',{pointerType:'mouse',pointerId:3,clientX:400,clientY:50});assert.equal(t.walk.yaw,yaw);
-t.renderer.domElement.fire('pointerdown',{pointerType:'mouse',pointerId:3,button:2,clientX:0,clientY:50});
-t.renderer.domElement.fire('pointermove',{pointerType:'mouse',pointerId:3,clientX:350,clientY:50});assert.equal(t.walk.yaw,yaw);
+// Start walking first, then initiate mouse look without releasing W.
+t.walk.keys.clear();c.window.fire('keydown',{code:'KeyW',target:{tagName:'CANVAS'}});assert(t.walk.keys.has('KeyW'));
+let yaw=t.walk.yaw;const oldZ=t.walk.z;
+t.renderer.domElement.fire('mousedown',{button:0,clientX:0,clientY:50});
+document.fire('mousemove',{buttons:1,clientX:175,clientY:50});assert(Math.abs((yaw-t.walk.yaw)-1.575)<1e-9);assert(t.walk.keys.has('KeyW'));
+const before=t.walk.x;t.updateWalk(10000);t.updateWalk(10016);assert(t.walk.x!==before||t.walk.z!==oldZ);
+c.window.fire('mouseup',{button:0});yaw=t.walk.yaw;document.fire('mousemove',{buttons:0,clientX:350,clientY:50});assert.equal(t.walk.yaw,yaw);assert(t.walk.keys.has('KeyW'));c.window.fire('keyup',{code:'KeyW'});
+// Inverse order: mouse held first, then W.
+t.renderer.domElement.fire('mousedown',{button:0,clientX:0,clientY:50});c.window.fire('keydown',{code:'KeyW',target:{tagName:'CANVAS'}});
+document.fire('mousemove',{buttons:1,clientX:350,clientY:50});assert(Math.abs((yaw-t.walk.yaw)-3.15)<1e-9);assert(t.walk.keys.has('KeyW'));c.window.fire('mouseup',{button:0});c.window.fire('keyup',{code:'KeyW'});
 // Independent fingers: releasing look must not release movement.
 t.movePad.fire('pointerdown',{pointerType:'touch',pointerId:1,button:0,clientX:50,clientY:50});
 t.movePad.fire('pointermove',{pointerType:'touch',pointerId:1,clientX:50,clientY:15});assert.equal(t.walk.stick.y,-1);
