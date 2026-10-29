@@ -2525,6 +2525,7 @@ viewer.before(walkBar);
 const walkStyle=document.createElement('style');walkStyle.textContent=`
 #walk-help{font-size:13px} .walk-pad{position:absolute;bottom:18px;width:100px;height:100px;border-radius:50%;background:#ede8deaa;border:2px solid #746b5c;touch-action:none;z-index:8;display:none;align-items:center;justify-content:center;color:#333;user-select:none}
 .walk-pad.move{left:18px}.walk-pad.look{right:18px} .walking .walk-pad{display:flex}.walking canvas{touch-action:none}.walking .labels{display:none}
+@media (hover:hover) and (pointer:fine){.walking .walk-pad{display:none}.walking canvas{cursor:crosshair}}
 `;document.head.append(walkStyle);
 const movePad=document.createElement('div'),lookPad=document.createElement('div');
 movePad.className='walk-pad move';movePad.textContent='拖曳移動';lookPad.className='walk-pad look';lookPad.textContent='拖曳轉頭';viewer.append(movePad,lookPad);
@@ -2566,11 +2567,11 @@ function enterWalk(){
   anim=null;controls.enabled=false;walk.active=true;roof.visible=true;rs.visible=true;
   savedWalk.doors.forEach(([m])=>m.visible=false);camera.fov=65;camera.near=.04;camera.updateProjectionMatrix();
   viewer.classList.add('walking');enterButton.hidden=true;exitButton.hidden=resetButton.hidden=false;
-  help.textContent='WASD／方向鍵移動，按住畫面拖曳轉頭；手機用雙搖桿。Esc 返回。門片暫時收起，視高 160 cm。';
-  document.querySelectorAll('[id^="t-"]').forEach(b=>{b.dataset.walkDisabled=String(b.disabled);b.disabled=true;});resetWalk();
+  setWalkHelp();
+  document.querySelectorAll('[id^="t-"]').forEach(b=>{b.dataset.walkDisabled=String(b.disabled);b.disabled=true;});resetWalk();requestWalkLock();
 }
 function exitWalk(){
-  if(!walk.active)return;walk.active=false;clearWalkInput();viewer.classList.remove('walking');
+  if(!walk.active)return;walk.active=false;clearWalkInput();if(document.pointerLockElement===renderer.domElement)document.exitPointerLock();viewer.classList.remove('walking');
   savedWalk.doors.forEach(([m,v])=>m.visible=v);roof.visible=savedWalk.roof;rs.visible=savedWalk.rs;
   camera.fov=savedWalk.fov;camera.near=savedWalk.near;camera.updateProjectionMatrix();camera.position.copy(savedWalk.p);controls.target.copy(savedWalk.t);controls.enabled=true;controls.update();
   document.querySelectorAll('[id^="t-"]').forEach(b=>{b.disabled=b.dataset.walkDisabled==='true';delete b.dataset.walkDisabled;});
@@ -2578,12 +2579,44 @@ function exitWalk(){
 }
 enterButton.onclick=enterWalk;exitButton.onclick=exitWalk;resetButton.onclick=resetWalk;
 const walkCodes=['KeyW','KeyA','KeyS','KeyD','ArrowUp','ArrowLeft','ArrowDown','ArrowRight'];
-window.addEventListener('keydown',e=>{if(!walk.active||/INPUT|TEXTAREA|SELECT/.test(e.target.tagName))return;if(e.code==='Escape'){exitWalk();return;}if(walkCodes.includes(e.code)){e.preventDefault();walk.keys.add(e.code);}});
+window.addEventListener('keydown',e=>{if(!walk.active||/INPUT|TEXTAREA|SELECT/.test(e.target.tagName))return;if(e.code==='Escape'){if(document.pointerLockElement!==renderer.domElement)exitWalk();return;}if(walkCodes.includes(e.code)){e.preventDefault();walk.keys.add(e.code);}});
 window.addEventListener('keyup',e=>walk.keys.delete(e.code));window.addEventListener('blur',clearWalkInput);document.addEventListener('visibilitychange',clearWalkInput);
+function turnWalk(dx,dy){
+  walk.yaw-=dx*.004;walk.pitch=Math.max(-1.35,Math.min(1.35,walk.pitch-dy*.004));
+}
+function setWalkHelp(){
+  if(!walk.active)return;
+  help.textContent=document.pointerLockElement===renderer.domElement
+    ?'WASD／方向鍵行走，移動滑鼠轉頭；Esc 釋放滑鼠。門片暫時收起，視高 160 cm。'
+    :'電腦：WASD 行走、滑鼠移動轉頭，點畫面鎖定滑鼠；手機：左手拖曳移動、右手滑動畫面轉頭。Esc 返回。';
+}
+function requestWalkLock(){
+  if(!walk.active||!matchMedia('(hover:hover) and (pointer:fine)').matches||!renderer.domElement.requestPointerLock)return;
+  try{const result=renderer.domElement.requestPointerLock();if(result&&result.catch)result.catch(setWalkHelp);}catch(e){setWalkHelp();}
+}
+document.addEventListener('pointerlockchange',()=>{clearWalkInput();setWalkHelp();});
+document.addEventListener('pointerlockerror',setWalkHelp);
+document.addEventListener('mousemove',e=>{
+  if(walk.active&&document.pointerLockElement===renderer.domElement)turnWalk(e.movementX,e.movementY);
+});
+renderer.domElement.addEventListener('click',requestWalkLock);
+// Each touch surface owns a distinct pointer, so movement continues while turning.
 function bindWalkPointer(el,move){let id=null,start=null,last=null;
- el.addEventListener('pointerdown',e=>{if(!walk.active||id!==null||e.button>0)return;e.preventDefault();id=e.pointerId;start=last={x:e.clientX,y:e.clientY};el.setPointerCapture(id);});
- el.addEventListener('pointermove',e=>{if(e.pointerId!==id)return;e.preventDefault();if(move){walk.stick.x=Math.max(-1,Math.min(1,(e.clientX-start.x)/35));walk.stick.y=Math.max(-1,Math.min(1,(e.clientY-start.y)/35));}else{walk.yaw-=(e.clientX-last.x)*.004;walk.pitch=Math.max(-1.35,Math.min(1.35,walk.pitch-(e.clientY-last.y)*.004));}last={x:e.clientX,y:e.clientY};});
- const stop=e=>{if(e.pointerId!==id)return;id=null;if(move)walk.stick.x=walk.stick.y=0;};['pointerup','pointercancel','lostpointercapture'].forEach(t=>el.addEventListener(t,stop));
+ const cancel=()=>{id=null;start=last=null;if(move)walk.stick.x=walk.stick.y=0;};
+ window.addEventListener('blur',cancel);document.addEventListener('visibilitychange',cancel);
+ el.addEventListener('pointerdown',e=>{if(!walk.active||id!==null||e.button>0||(!move&&e.pointerType==='mouse'))return;e.preventDefault();id=e.pointerId;start=last={x:e.clientX,y:e.clientY};el.setPointerCapture(id);});
+ el.addEventListener('pointermove',e=>{
+   if(!walk.active)return;
+   if(!move&&e.pointerType==='mouse'){
+     if(document.pointerLockElement!==renderer.domElement)turnWalk(e.movementX||0,e.movementY||0);
+     return;
+   }
+   if(e.pointerId!==id)return;e.preventDefault();
+   if(move){walk.stick.x=Math.max(-1,Math.min(1,(e.clientX-start.x)/35));walk.stick.y=Math.max(-1,Math.min(1,(e.clientY-start.y)/35));}
+   else turnWalk(e.clientX-last.x,e.clientY-last.y);
+   last={x:e.clientX,y:e.clientY};
+ });
+ const stop=e=>{if(e.pointerId===id)cancel();};['pointerup','pointercancel','lostpointercapture'].forEach(t=>el.addEventListener(t,stop));
 }
 bindWalkPointer(movePad,true);bindWalkPointer(lookPad,false);bindWalkPointer(renderer.domElement,false);
 function updateWalk(now){
