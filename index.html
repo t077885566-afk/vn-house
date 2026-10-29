@@ -1570,7 +1570,7 @@ const FRONT_BEARING=326;
 function dirOf(b){const r=(b-FRONT_BEARING)*Math.PI/180; return new THREE.Vector3(Math.sin(r),0,-Math.cos(r));}
 const SUN={am:{b:100,e:35,t:'上午'},noon:{b:180,e:72,t:'中午'},pm:{b:255,e:35,t:'下午'}};
 function setSun(k){const v=SUN[k], d=dirOf(v.b).multiplyScalar(Math.cos(v.e*Math.PI/180)); d.y=Math.sin(v.e*Math.PI/180);
-  sun.position.copy(sun.target.position).addScaledVector(d,40); sun.intensity=window.__night?0.07:(k==='noon'?0.95:0.8);}
+  sun.position.copy(sun.target.position).addScaledVector(d,40); sun.intensity=window.__night?0.07:(k==='noon'?0.95:0.8);if(scene.userData.syncAtriumDaylight)scene.userData.syncAtriumDaylight(k);}
 setSun('pm');
 sun.castShadow=true; sun.shadow.mapSize.set(2048,2048);
 Object.assign(sun.shadow.camera,{left:-32,right:32,top:32,bottom:-32,near:1,far:90});
@@ -2276,6 +2276,7 @@ function renderLabel(d){const zh=d.dataset.zh, vi=VI[zh]||zh;
   if(LANG==='both' && vi!==zh){d.textContent=zh; const sp=document.createElement('span'); sp.className='vi'; sp.textContent=vi; d.appendChild(sp);}
   else d.textContent=(LANG==='vi')?vi:zh;}
 function applyLang(){
+  if(scene.userData.labelAtriumButton)scene.userData.labelAtriumButton();
   LBLS.forEach(renderLabel);
   document.querySelectorAll('[data-i18n]').forEach(el=>{const k=el.dataset.i18n; el.textContent=LANG==='zh'?k:(VI[k]||k);});
   document.querySelectorAll('[data-lang]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.lang===LANG)));
@@ -2442,7 +2443,8 @@ function setNight(on){nightOn=on; window.__night=on;
   hemi.intensity=on?0.16:0.75; hemi.color.setHex(on?0x7F93C9:0xFFFFFF); hemi.groundColor.setHex(on?0x1A1C24:0x8A8670);
   sun.color.setHex(on?0x9FB4FF:0xFFFFFF); sun.intensity=on?0.07:(window.__sunKey==='noon'?0.95:0.8);
   LAMPS.forEach(l=>l.visible=on); mLamp.emissiveIntensity=on?1.8:0; mLampN.emissiveIntensity=on?1.8:0;
-  if(on) scene.background=new THREE.Color(0x0B1220); else setBg();}
+  if(on) scene.background=new THREE.Color(0x0B1220); else setBg();
+  if(scene.userData.syncAtriumDaylight)scene.userData.syncAtriumDaylight();}
 
 // 視角
 const views={
@@ -2510,6 +2512,35 @@ toggle('t-materials',on=>{
   });
 });
 applyLang();
+// Approximate bounced daylight from the existing front upper glass doors.
+// No new roof opening; local fill lights stand in for multi-bounce GI on mobile.
+const atriumDaylight=new THREE.Group();atriumDaylight.name='atrium-indirect-daylight';scene.add(atriumDaylight);
+const atriumSky=new THREE.PointLight(0xE8F1FF,.6,5.5,2);
+atriumSky.position.set(-7.1,BT+1.2,12.5);atriumDaylight.add(atriumSky);
+const atriumDown=new THREE.SpotLight(0xFFF2DB,.7,6,.31,.85,1.5);
+atriumDown.position.set(-7.0,BT+.22,13.65);atriumDown.target.position.set(-7.0,FL+.05,14.5);
+atriumDaylight.add(atriumDown,atriumDown.target);
+const atriumBounce=new THREE.PointLight(0xFFF0D8,.34,3.8,2);
+atriumBounce.position.set(-7.0,FL+1.75,14.35);atriumDaylight.add(atriumBounce);
+let atriumDaylightOn=true;
+function syncAtriumDaylight(key){
+  const k=key||window.__sunKey||'pm';
+  // Front faces NW: afternoon receives more direct light; morning is diffuse.
+  const strength={am:.65,noon:.9,pm:1.15}[k]||1;
+  atriumDaylight.visible=atriumDaylightOn&&!window.__night;
+  atriumSky.intensity=.6*strength;atriumDown.intensity=.7*strength;atriumBounce.intensity=.34*strength;
+  atriumDown.color.setHex(k==='pm'?0xFFE9CB:0xFFF5E5);
+  atriumDown.target.position.x=k==='am'?-6.65:k==='noon'?-7:-7.35;
+}
+scene.userData.syncAtriumDaylight=syncAtriumDaylight;
+const atriumButton=document.createElement('button');atriumButton.id='t-atrium-daylight';atriumButton.type='button';
+atriumButton.setAttribute('aria-pressed','true');
+function labelAtriumButton(){atriumButton.textContent=LANG==='vi'?'Ánh sáng thông tầng':'挑高間接採光';}
+labelAtriumButton();scene.userData.labelAtriumButton=labelAtriumButton;
+document.getElementById('t-night').after(atriumButton);
+atriumButton.addEventListener('click',()=>{atriumDaylightOn=!atriumDaylightOn;atriumButton.setAttribute('aria-pressed',String(atriumDaylightOn));syncAtriumDaylight();});
+syncAtriumDaylight();
+
 const needle=document.getElementById('needle'), NORTH=dirOf(0);
 const _a=new THREE.Vector3(), _b=new THREE.Vector3();
 function updCompass(){_a.copy(controls.target).project(camera); _b.copy(controls.target).addScaledVector(NORTH,5).project(camera);
@@ -2559,7 +2590,7 @@ function canStand(x,z,y){
   return [[0,0],[radius,0],[-radius,0],[0,radius],[0,-radius]].every(([a,b])=>supportedHeight(x+a,z+b,y)!==null);
 }
 function walkCamera(){camera.position.set(walk.x,walk.y+1.6,walk.z);camera.rotation.order='YXZ';camera.rotation.set(walk.pitch,walk.yaw,0);controls.target.copy(camera.position).add(new THREE.Vector3(0,0,-1).applyQuaternion(camera.quaternion));}
-function clearWalkInput(){walk.keys.clear();walk.stick.x=walk.stick.y=0;walk.last=0;}
+function clearWalkInput(){if(typeof walkMouseDrag!=='undefined')walkMouseDrag=null;walk.keys.clear();walk.stick.x=walk.stick.y=0;walk.last=0;}
 function resetWalk(){clearWalkInput();Object.assign(walk,{x:-5.75,z:11.4,y:FL+.015,yaw:Math.PI,pitch:0});walkCamera();}
 function enterWalk(){
   if(walk.active)return;
@@ -2568,13 +2599,13 @@ function enterWalk(){
   savedWalk.doors.forEach(([m])=>m.visible=false);camera.fov=65;camera.near=.04;camera.updateProjectionMatrix();
   viewer.classList.add('walking');enterButton.hidden=true;exitButton.hidden=resetButton.hidden=false;
   setWalkHelp();
-  document.querySelectorAll('[id^="t-"]').forEach(b=>{b.dataset.walkDisabled=String(b.disabled);b.disabled=true;});resetWalk();
+  document.querySelectorAll('[id^="t-"]:not(#t-atrium-daylight)').forEach(b=>{b.dataset.walkDisabled=String(b.disabled);b.disabled=true;});resetWalk();
 }
 function exitWalk(){
   if(!walk.active)return;walk.active=false;clearWalkInput();viewer.classList.remove('walking');
   savedWalk.doors.forEach(([m,v])=>m.visible=v);roof.visible=savedWalk.roof;rs.visible=savedWalk.rs;
   camera.fov=savedWalk.fov;camera.near=savedWalk.near;camera.updateProjectionMatrix();camera.position.copy(savedWalk.p);controls.target.copy(savedWalk.t);controls.enabled=true;controls.update();
-  document.querySelectorAll('[id^="t-"]').forEach(b=>{b.disabled=b.dataset.walkDisabled==='true';delete b.dataset.walkDisabled;});
+  document.querySelectorAll('[id^="t-"]:not(#t-atrium-daylight)').forEach(b=>{b.disabled=b.dataset.walkDisabled==='true';delete b.dataset.walkDisabled;});
   enterButton.hidden=false;exitButton.hidden=resetButton.hidden=true;help.textContent='';
 }
 enterButton.onclick=enterWalk;exitButton.onclick=exitWalk;resetButton.onclick=resetWalk;
@@ -2591,9 +2622,9 @@ function setWalkHelp(){
 function bindWalkPointer(el,move){let id=null,start=null,last=null;
  const cancel=()=>{id=null;start=last=null;if(move)walk.stick.x=walk.stick.y=0;};
  window.addEventListener('blur',cancel);document.addEventListener('visibilitychange',cancel);
- el.addEventListener('pointerdown',e=>{if(!walk.active||id!==null||e.button>0)return;e.preventDefault();id=e.pointerId;start=last={x:e.clientX,y:e.clientY};el.setPointerCapture(id);});
+ el.addEventListener('pointerdown',e=>{if(!walk.active||e.pointerType==='mouse'||id!==null||e.button>0)return;e.preventDefault();id=e.pointerId;start=last={x:e.clientX,y:e.clientY};el.setPointerCapture(id);});
  el.addEventListener('pointermove',e=>{
-   if(!walk.active)return;
+   if(!walk.active||e.pointerType==='mouse')return;
    if(e.pointerId!==id)return;e.preventDefault();
    if(move){walk.stick.x=Math.max(-1,Math.min(1,(e.clientX-start.x)/35));walk.stick.y=Math.max(-1,Math.min(1,(e.clientY-start.y)/35));}
    else turnWalk(e.clientX-last.x,e.clientY-last.y,e.pointerType==='mouse'?.009:.004);
@@ -2602,6 +2633,23 @@ function bindWalkPointer(el,move){let id=null,start=null,last=null;
  const stop=e=>{if(e.pointerId===id)cancel();};['pointerup','pointercancel','lostpointercapture'].forEach(t=>el.addEventListener(t,stop));
 }
 bindWalkPointer(movePad,true);bindWalkPointer(lookPad,false);bindWalkPointer(renderer.domElement,false);
+// Mouse look is independent of touch pointer ownership and keyboard order.
+let walkMouseDrag=null;
+renderer.domElement.addEventListener('mousedown',e=>{
+  if(!walk.active||e.button!==0)return;
+  e.preventDefault();
+  walkMouseDrag={x:e.clientX,y:e.clientY};
+});
+document.addEventListener('mousemove',e=>{
+  if(!walk.active||!walkMouseDrag)return;
+  if(e.buttons!==undefined&&(e.buttons&1)===0){walkMouseDrag=null;return;}
+  e.preventDefault();
+  turnWalk(e.clientX-walkMouseDrag.x,e.clientY-walkMouseDrag.y,.009);
+  walkMouseDrag={x:e.clientX,y:e.clientY};
+});
+window.addEventListener('mouseup',e=>{if(e.button===0)walkMouseDrag=null;});
+window.addEventListener('blur',()=>{walkMouseDrag=null;});
+document.addEventListener('visibilitychange',()=>{walkMouseDrag=null;});
 function updateWalk(now){
  const dt=walk.last?Math.min((now-walk.last)/1000,.05):0;walk.last=now;
  const pressed=(a,b)=>walk.keys.has(a)||walk.keys.has(b);
@@ -2634,4 +2682,5 @@ requestAnimationFrame(loop);
 
 </body>
 </html>
+
 
