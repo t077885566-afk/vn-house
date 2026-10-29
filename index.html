@@ -1822,7 +1822,7 @@ box(9.36,9.42,10.25,11.15,FL,FL+2.1,mat.fwood).userData.walkDoor=true;          
 box(9.36,9.42,10.25,11.15,FL+2.1,FL+2.15,mat.fwood);
 for(let z=10.25;z<=11.151;z+=0.15) box(9.47,9.53,z-0.015,z+0.015,FL+2.15,FL+2.8,mat.fwood);   // 木格柵
 
-wallX(10,4.62,7.71,ET,[D(5.4,6.3,2.4),D(6.3,7.2,2.4)],mat.wall);   // 雙開大門 1.8 m（兩扇各 0.9 m，往內開）
+wallX(10,4.62,7.71,ET,[D(5.4,6.3,2.4),Object.assign(D(6.3,7.2,2.4),{hl:true})],mat.wall);   // 雙開大門 1.8 m（兩扇各 0.9 m，往內開）
 // 神桌區：矮牆＋低檯度大面窗（半開放，左側向客廳開放）
 wallX(10,9.62,12.89,ET,[LW(9.8,12.7)],mat.wall);
 wallZ(13,10.12,11.88,ET,[LW(10.3,11.7)],mat.wall);
@@ -1877,7 +1877,7 @@ wallX(17,9.555,12.89,IT,[D(9.65,10.45)],mat.iwall);   // 主臥牆切齊 z=17 �
       seg(ax,pos,o.a,o.a+f,-t/2,t/2,FL,y1,mJamb); seg(ax,pos,o.b-f,o.b,-t/2,t/2,FL,y1,mJamb);
       seg(ax,pos,o.a,o.b,-t/2,t/2,y1-f,y1,mJamb);
       seg(ax,pos,o.a+f,o.b-f,-0.02,0.02,FL+0.01,y1-f,mDoor).userData.walkDoor=true;
-      seg(ax,pos,o.b-0.16,o.b-0.1,-0.05,0.05,FL+1.0,FL+1.04,mat.steel).userData.walkDoor=true;
+      seg(ax,pos,o.hl?o.a+0.1:o.b-0.16,o.hl?o.a+0.16:o.b-0.1,-0.05,0.05,FL+1.0,FL+1.04,mat.steel).userData.walkDoor=true;
     }
   });
 })();
