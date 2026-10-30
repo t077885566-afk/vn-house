@@ -219,9 +219,9 @@ ul{margin:0;padding-left:1.2em;display:flex;flex-direction:column;gap:6px;font-s
     <section>
       <h2>結構尺寸建議（初版，未變更）</h2>
       <ul>
-        <li>RC 柱 220 × 220 mm，共 16 支；大梁 220 × 400 mm；地梁 220 × 350 mm</li>
+        <li>RC 柱 400 × 400 mm，共 16 支（柱心對正格線）；大梁 250 × 450 mm；地梁 220 × 350 mm</li>
         <li>外牆 220 mm 磚牆，內牆 110 mm 磚牆；衛浴牆底做 RC 止水墩約 200 mm</li>
-        <li>室內地坪 +800 mm（防洪），室內樓高（地坪至梁頂）3.9 m，梁底約 3.5 m</li>
+        <li>室內地坪 +800 mm（防洪），室內樓高（地坪至梁頂）3.9 m，梁下淨高約 3.45 m</li>
         <li>屋頂：琉璃瓦（ngói tráng men），坡度約 39%（約 21°）；C 型鋼屋架 C150×50 @1.5 m＋C 型鋼檁條 C100×50 @0.8 m＋掛瓦條 @0.32 m；瓦片以鐵絲或螺絲逐片固定（防颱）；瓦屋頂較重，屋架與柱梁需依瓦重計算</li>
         <li>閣樓樓板 RC 120 mm 與大梁一體澆置；柱、梁、基礎需依樓板重量重新計算</li>
         <li>二樓樓梯口與客廳挑高開口四周需加做小梁補強；樓梯間平屋頂與牆體荷重需一併計算</li>
@@ -1655,7 +1655,7 @@ box(0,FT,0,50,0,FH,mat.fence); box(15-FT,15,0,50,0,FH,mat.fence); box(0,15,50-FT
 box(1,8.5,0,2.2,0,0.02,mat.pave);
 
 // 住宅基座與地坪
-const FL=0.8, BB=4.3, BT=4.7, KW=1.5;   // KW：閣樓側牆加高 // 地坪、梁底、梁頂（室內樓高：地坪至梁頂 3.9m）
+const FL=0.8, BB=4.25, BT=4.7, KW=1.5;   // KW：閣樓側牆加高 // 地坪、梁底、梁頂（室內樓高：地坪至梁頂 3.9m）
 box(1-0.11,13+0.11,10-0.11,22+0.11,0,FL,mat.plinth);
 box(1.11,12.89,12.11,21.89,FL,FL+0.01,mat.tile);
 box(1.11,4.445,15.055,16.945,FL,FL+0.012,mat.bathTile);
@@ -1883,7 +1883,7 @@ function ranmaWall(x,za,zb,doors){
   box(x-0.035,x+0.035,za,zb,(FL+2.46+BB-0.06)/2-0.015,(FL+2.46+BB-0.06)/2+0.015,mat.fwood);
   const g=box(x-0.006,x+0.006,za,zb,FL+2.46,BB-0.06,mFrost); g.castShadow=false;
 }
-wallZ(4.5,12.11,21.89,IT,[D(12.15,12.95),D(15.95,16.75),D(17.15,18.05)],mat.iwall);   // 公共衛浴門、臥室4 門   // v3 ⑦主臥門北移 0.9m
+wallZ(4.5,12.11,21.89,IT,[D(12.21,13.01),D(15.95,16.75),D(17.21,18.11)],mat.iwall);   // 公共衛浴門、臥室4 門   // v3 ⑦主臥門北移 0.9m
 // 餐廳與廚房之間的新隔牆（門靠臥室4 側），上段欄間
 function ranmaWallX(z,xa,xb,doors){
   let c=xa; doors.forEach(([a,b])=>{ if(a>c) box(c,a,z-IT/2,z+IT/2,FL,FL+2.4,mat.iwall); box(a,b,z-IT/2,z+IT/2,FL+2.2,FL+2.4,mat.iwall);
@@ -1898,9 +1898,9 @@ ranmaWallX(17,4.615,9.385,[[8.4,9.3]]);   // 對齊 z=17 大梁
 
 wallX(15,1.11,4.445,IT,[],mat.iwall);
 wallX(17,1.11,4.445,IT,[],mat.iwall);
-wallZ(9.5,12.11,21.89,IT,[D(12.2,13.0),D(17.15,17.95)],mat.iwall);   // 主臥門移到衛浴旁牆角（廚房門旁）
+wallZ(9.5,12.11,21.89,IT,[D(12.21,13.01),D(17.21,18.01)],mat.iwall);   // 主臥門移到衛浴旁牆角（廚房門旁）
 wallX(15,9.555,12.89,IT,[],mat.iwall);   // 主臥衛浴往臥室3 推 0.5 m
-wallX(17,9.555,12.89,IT,[D(9.65,10.45)],mat.iwall);   // 主臥牆切齊 z=17 大梁；主臥 → 專用衛浴
+wallX(17,9.555,12.89,IT,[D(9.71,10.51)],mat.iwall);   // 主臥牆切齊 z=17 大梁；主臥 → 專用衛浴
 
 // 門窗：黑色鋁框推拉窗＋紗窗、木門
 const doorOak=VN_TEX?pbrMaterial('oak',.25,0xCDB38B):physicalMaterial(M(0xCDB38B,{roughness:.62}),'oak',.0008,[.6,1.8]);
@@ -1945,10 +1945,10 @@ if(doorOak.userData.pbr)doorOak.userData.surfaceScale=[.6,2.4];
 
 // RC 柱與梁
 const structMeshes=[];
-const GX=[1,4.5,9.5,13], GZ=[10,12,17,22], CS=0.23;
+const GX=[1,4.5,9.5,13], GZ=[10,12,17,22], CS=0.40;   // 柱 400×400、梁 250×450，中心一律對正格線
 GX.forEach(x=>GZ.forEach(z=>structMeshes.push(box(x-CS/2,x+CS/2,z-CS/2,z+CS/2,FL,BT,mat.struct))));
-GZ.forEach(z=>structMeshes.push(box(1,13,z-0.11,z+0.11,BB,BT,mat.struct)));
-GX.forEach(x=>structMeshes.push(box(x-0.105,x+0.105,10,22,BB,BT-0.003,mat.struct)));
+GZ.forEach(z=>{const b=box(1,13,z-0.125,z+0.125,BB,BT,mat.struct); b.userData.beam=true; structMeshes.push(b);});
+GX.forEach(x=>{const b=box(x-0.125+0.003,x+0.125-0.003,10,22,BB,BT-0.003,mat.struct); b.userData.beam=true; structMeshes.push(b);});
 
 // 屋頂（雙斜、屋脊沿前後向）
 const roof=new THREE.Group(); scene.add(roof);
@@ -2180,22 +2180,22 @@ F(7.14,7.49,10.95,11.85,0.1,1.0,mat.fwood);   // 鞋櫃移到右側牆，避開�
 F(7.18,7.49,10.97,11.83,0,0.1,muji.black); F(7.135,7.141,11.398,11.402,0.12,0.98,muji.gap);   // v2：內縮踢腳＋雙門分縫
 F(7.0,7.49,10.95,11.85,1.0,1.03,muji.stone);   // 鞋櫃檯面（放鑰匙、花器）
 // 神桌區：祖先供桌 197×81×127cm，背靠住宅前牆、面向前院
-F(10.27,12.24,11.12,11.89,0,1.17,mat.altar); F(10.2,12.31,11.06,11.89,1.17,1.27,mat.altar);
-cyl(11.25,11.45,0.09,1.27,1.42,mat.brass);
-[10.7,11.8].forEach(x=>cyl(x,11.45,0.025,1.27,1.55,mat.brass));
-[10.95,11.55].forEach(x=>F(x-0.1,x+0.1,11.78,11.83,1.27,1.55,mat.dark));
-[10.45,12.05].forEach(x=>cyl(x,11.3,0.11,1.27,1.34,mat.fruit));
-F(10.6,11.9,10.3,10.95,0,0.01,mat.redmat);
+F(10.27,12.24,11.02,11.79,0,1.17,mat.altar); F(10.2,12.31,10.96,11.79,1.17,1.27,mat.altar);   // 離 z=12 大梁 ≥10cm
+cyl(11.25,11.38,0.09,1.27,1.42,mat.brass);
+[10.7,11.8].forEach(x=>cyl(x,11.38,0.025,1.27,1.55,mat.brass));
+[10.95,11.55].forEach(x=>F(x-0.1,x+0.1,11.72,11.77,1.27,1.55,mat.dark));
+[10.45,12.05].forEach(x=>cyl(x,11.22,0.11,1.27,1.34,mat.fruit));
+F(10.6,11.9,10.3,10.9,0,0.01,mat.redmat);
 // 臥室1
-bed(1.11,3.11,13.0,13.97,'x0'); table(3.9,4.44,13.4,14.4,0.74); chair(3.55,13.9);
+bed(1.15,3.15,13.0,13.97,'x0'); table(3.9,4.44,13.4,14.4,0.74); chair(3.55,13.9);
 // 樓梯下收納（臥室1 側開門，奶油白木門 ×4）
 [1.2,1.79,2.38,2.97].forEach(x=>{F(x+0.01,x+0.58,12.08,12.11,0,1.73,mCream); F(x+0.27,x+0.3,12.11,12.13,0.8,1.2,mat.steel);});
 // 公共衛浴（左，原主臥衛浴）
 F(2.17,2.23,15.06,16.94,0,2.0,mat.showerGlass); shower(1.4,16.0); toilet(2.8,15.06); vanity(3.45,4.39,15.06,15.56);
 F(3.5,4.34,15.06,15.08,1.1,1.9,mat.steel);
 // 臥室4（左後，與主臥對調）
-bed(1.11,3.11,18.8,20.2,'x0'); F(1.11,1.56,18.3,18.75,0,0.5,mat.fwood); F(1.11,1.56,20.25,20.7,0,0.5,mat.fwood);
-wardrobe(3.845,4.445,19.15,21.85,'-x'); table(1.12,1.62,17.15,18.05,0.74); chair(1.95,17.6);   // 書桌
+bed(1.15,3.15,18.8,20.2,'x0'); F(1.11,1.56,18.3,18.75,0,0.5,mat.fwood); F(1.11,1.56,20.25,20.7,0,0.5,mat.fwood);
+wardrobe(3.845,4.445,19.15,21.85,'-x'); table(1.22,1.72,17.22,18.05,0.74); chair(2.05,17.6);   // 書桌
 // LDK
 F(5.6,8.7,12.9,15.45,0,0.008,mat.rug);
 F(4.56,5.01,13.85,15.45,0,0.45,mat.fwood); F(4.74,4.79,13.92,15.37,0.62,1.43,mat.dark); F(4.72,4.8,14.5,14.8,0.45,0.62,mat.dark);   // 電視貼臥室1 牆（樓梯下，梯底最低約 2.3m）
@@ -2260,13 +2260,13 @@ scene.children.forEach(mesh=>{
   });
 })();
 // 臥室3
-wardrobe(10.55,12.89,12.11,12.71,'+z'); bed(9.56,11.56,13.25,14.65,'x0'); table(12.39,12.89,13.0,14.2,0.74); chair(12.1,13.6);   // v3 ②③
+wardrobe(10.55,12.79,12.11,12.71,'+z'); bed(9.75,11.75,13.25,14.65,'x0'); table(12.39,12.89,13.0,14.2,0.74); chair(12.1,13.6);   // v3 ②③
 // 主臥專用衛浴（右，原公共衛浴）
 F(11.87,11.93,15.06,16.94,0,2.0,mat.showerGlass); shower(12.4,16.0); toilet(11.25,15.06); vanity(9.6,10.5,15.06,15.56);
 F(9.65,10.45,15.06,15.08,1.1,1.9,mat.steel);
 // 主臥室（右後角，對角線最深處）：床頭靠外牆、窗在床側、浴室門與房門都不沖床
-bed(10.89,12.89,19.9,21.7,'x1'); F(12.44,12.89,19.4,19.85,0,0.5,mat.fwood); wardrobe(9.555,10.155,19.85,21.85,'+x');
-table(12.39,12.89,17.15,18.05,0.74); chair(12.1,17.6);   // 化妝台靠外牆（鏡不照床）
+bed(10.85,12.85,19.9,21.7,'x1'); F(12.44,12.89,19.4,19.85,0,0.5,mat.fwood); wardrobe(9.555,10.155,19.85,21.85,'+x');
+table(12.39,12.79,17.22,18.05,0.74); chair(12.1,17.6);   // 化妝台靠外牆（鏡不照床）
 
 // 後門洗衣區＋鋼構雨遮（取消戶外鋼梯與後院延伸屋頂）
 box(6.45,7.05,22.35,22.95,0,0.85,mat.fwhite); box(7.15,7.75,22.35,22.85,0,0.8,mat.ceramic);
@@ -2349,7 +2349,7 @@ for(let z=34;z<=42.01;z+=2) box(10.95,11.05,z-0.05,z+0.05,0,1.8,mat.wood);
 
 // 標籤
 const labels=new THREE.Group(); scene.add(labels);
-const VI={"防墜網（護欄包覆＋開口水平網）": "Lưới chống rơi (bọc lan can + lưới ngang)", "長條家電櫃（上下櫃）": "Tủ thiết bị dài (trên + dưới)", "主臥門": "Cửa P.ngủ chính", "露臺桌椅": "Bàn ghế sân thượng", "細緻材質":"Chi tiết vật liệu","客廳材質":"Vật liệu phòng khách","餐廚材質":"Vật liệu bếp","夜間燈光": "Đèn ban đêm", "二樓軌道燈": "Đèn ray tầng 2", "樓梯下收納（臥室1）": "Kho dưới cầu thang (P.ngủ 1)", "後院水塔": "Bồn nước sân sau", "加壓馬達 A／B（青龍方）": "Bơm tăng áp A/B (hướng Thanh Long)", "室內樓梯（往二樓）": "Cầu thang trong (lên tầng 2)", "二樓樓梯間": "Buồng thang tầng 2", "客廳挑高": "Thông tầng phòng khách", "日式玻璃拉門＋紗門": "Cửa lùa kính kiểu Nhật + cửa lưới", "閣樓水塔": "Bồn nước áp mái", "水塔A 1000L（主臥衛浴＋後院澆灌）": "Bồn A 1000L (WC P.ngủ chính + tưới vườn)", "水塔B 1000L（客衛浴＋廚房＋洗衣機）": "Bồn B 1000L (WC chung + bếp + máy giặt)", "加壓馬達A": "Bơm tăng áp A", "加壓馬達B": "Bơm tăng áp B", "吊掛鋼樑（吊水塔上露臺）": "Dầm thép tời (kéo bồn lên sân thượng)", "閣樓側牆加高 1.5m": "Tường áp mái nâng 1,5m", "後院澆灌水龍頭": "Vòi tưới vườn sau", "露臺雙開門 1.4m": "Cửa đôi ra sân thượng 1,4m", "二樓露臺": "Sân thượng tầng 2", "大門雨遮": "Mái che cửa chính", "冷氣室外機 ×5": "Dàn nóng điều hòa ×5", "強化玻璃導光": "Kính cường lực lấy sáng", "花台（神桌正上方）": "Bồn hoa (ngay trên bàn thờ)", "露臺門": "Cửa ra sân thượng", "屋頂結構": "Kết cấu mái", "C 鋼屋架 C150×50 @1.5m": "Vì kèo thép C150×50 @1,5m", "C 鋼檁條 C100×50 @0.8m": "Xà gồ thép C100×50 @0,8m", "臥室1（單人）": "Phòng ngủ 1 (đơn)", "主臥衛浴": "WC phòng ngủ chính", "主臥室": "Phòng ngủ chính", "客廳": "Phòng khách", "餐廳": "Phòng ăn", "廚房": "Bếp", "臥室3": "Phòng ngủ 3", "公共衛浴": "WC chung", "臥室4": "Phòng ngủ 4", "玄關": "Sảnh vào", "緣側": "Hiên", "神桌區": "Khu thờ", "神明廳": "Phòng thờ", "室內樓梯": "Cầu thang trong", "室內樓梯（往閣樓）": "Cầu thang trong (lên áp mái)", "後門雨遮": "Mái che cửa sau", "餐桌": "Bàn ăn", "木拉門": "Cửa trượt gỗ", "前院": "Sân trước", "側邊通道": "Lối đi hông", "曬衣區": "Khu phơi đồ", "果園": "Vườn cây ăn quả", "雞舍": "Chuồng gà", "放養區": "Sân thả gà", "道路": "Đường", "大門 6m": "Cổng 6m", "汽車位": "Chỗ đậu ô tô", "機車棚": "Nhà xe máy", "洗衣區": "Khu giặt", "戶外鋼梯": "Cầu thang thép", "轉折平台 +2.07m": "Chiếu nghỉ +2,07m", "檢修平台 +4.70m": "Sàn kiểm tra +4,70m", "側邊深屋簷": "Mái hiên hông", "後院延伸屋頂": "Mái sân sau", "柱 220×220": "Cột 220×220", "外牆 220": "Tường ngoài 220", "內牆 110": "Tường trong 110", "大梁 220×400": "Dầm 220×400", "鋼柱 100×100 @4m": "Cột thép 100×100 @4m", "端部鋼桁架": "Vì kèo thép", "視角": "Góc nhìn", "顯示": "Hiển thị", "單指旋轉・雙指縮放／平移": "1 ngón: xoay · 2 ngón: phóng to / di chuyển", "全區鳥瞰": "Toàn khu", "住宅近看": "Cận cảnh nhà", "正面": "Mặt trước", "後側樓梯": "Cầu thang sau", "後院": "Sân sau", "俯視（同 Google 地圖方位）": "Nhìn từ trên (theo Google Maps)", "屋頂": "Mái", "屋頂琉璃瓦": "Mái ngói men", "掛瓦條 li tô @0.32m": "Li tô @0,32m", "入口平台": "Sảnh trước", "天井採光": "Giếng trời", "客廳室內": "Trong phòng khách", "欄間（木格霧玻璃）": "Ô thoáng gỗ + kính mờ", "廚房門": "Cửa bếp", "無障礙坡道 1:12": "Dốc xe lăn 1:12", "雙開大門": "Cửa đôi", "柱梁標示": "Cột dầm", "家具": "Nội thất", "空間標籤": "Nhãn phòng", "標籤": "Nhãn", "日照：": "Nắng: ", "上午": "sáng", "中午": "trưa", "下午": "chiều"};
+const VI={"防墜網（護欄包覆＋開口水平網）": "Lưới chống rơi (bọc lan can + lưới ngang)", "長條家電櫃（上下櫃）": "Tủ thiết bị dài (trên + dưới)", "主臥門": "Cửa P.ngủ chính", "露臺桌椅": "Bàn ghế sân thượng", "細緻材質":"Chi tiết vật liệu","客廳材質":"Vật liệu phòng khách","餐廚材質":"Vật liệu bếp","夜間燈光": "Đèn ban đêm", "二樓軌道燈": "Đèn ray tầng 2", "樓梯下收納（臥室1）": "Kho dưới cầu thang (P.ngủ 1)", "後院水塔": "Bồn nước sân sau", "加壓馬達 A／B（青龍方）": "Bơm tăng áp A/B (hướng Thanh Long)", "室內樓梯（往二樓）": "Cầu thang trong (lên tầng 2)", "二樓樓梯間": "Buồng thang tầng 2", "客廳挑高": "Thông tầng phòng khách", "日式玻璃拉門＋紗門": "Cửa lùa kính kiểu Nhật + cửa lưới", "閣樓水塔": "Bồn nước áp mái", "水塔A 1000L（主臥衛浴＋後院澆灌）": "Bồn A 1000L (WC P.ngủ chính + tưới vườn)", "水塔B 1000L（客衛浴＋廚房＋洗衣機）": "Bồn B 1000L (WC chung + bếp + máy giặt)", "加壓馬達A": "Bơm tăng áp A", "加壓馬達B": "Bơm tăng áp B", "吊掛鋼樑（吊水塔上露臺）": "Dầm thép tời (kéo bồn lên sân thượng)", "閣樓側牆加高 1.5m": "Tường áp mái nâng 1,5m", "後院澆灌水龍頭": "Vòi tưới vườn sau", "露臺雙開門 1.4m": "Cửa đôi ra sân thượng 1,4m", "二樓露臺": "Sân thượng tầng 2", "大門雨遮": "Mái che cửa chính", "冷氣室外機 ×5": "Dàn nóng điều hòa ×5", "強化玻璃導光": "Kính cường lực lấy sáng", "花台（神桌正上方）": "Bồn hoa (ngay trên bàn thờ)", "露臺門": "Cửa ra sân thượng", "屋頂結構": "Kết cấu mái", "C 鋼屋架 C150×50 @1.5m": "Vì kèo thép C150×50 @1,5m", "C 鋼檁條 C100×50 @0.8m": "Xà gồ thép C100×50 @0,8m", "臥室1（單人）": "Phòng ngủ 1 (đơn)", "主臥衛浴": "WC phòng ngủ chính", "主臥室": "Phòng ngủ chính", "客廳": "Phòng khách", "餐廳": "Phòng ăn", "廚房": "Bếp", "臥室3": "Phòng ngủ 3", "公共衛浴": "WC chung", "臥室4": "Phòng ngủ 4", "玄關": "Sảnh vào", "緣側": "Hiên", "神桌區": "Khu thờ", "神明廳": "Phòng thờ", "室內樓梯": "Cầu thang trong", "室內樓梯（往閣樓）": "Cầu thang trong (lên áp mái)", "後門雨遮": "Mái che cửa sau", "餐桌": "Bàn ăn", "木拉門": "Cửa trượt gỗ", "前院": "Sân trước", "側邊通道": "Lối đi hông", "曬衣區": "Khu phơi đồ", "果園": "Vườn cây ăn quả", "雞舍": "Chuồng gà", "放養區": "Sân thả gà", "道路": "Đường", "大門 6m": "Cổng 6m", "汽車位": "Chỗ đậu ô tô", "機車棚": "Nhà xe máy", "洗衣區": "Khu giặt", "戶外鋼梯": "Cầu thang thép", "轉折平台 +2.07m": "Chiếu nghỉ +2,07m", "檢修平台 +4.70m": "Sàn kiểm tra +4,70m", "側邊深屋簷": "Mái hiên hông", "後院延伸屋頂": "Mái sân sau", "柱 400×400": "Cột 400×400", "外牆 220": "Tường ngoài 220", "內牆 110": "Tường trong 110", "大梁 250×450": "Dầm 250×450", "鋼柱 100×100 @4m": "Cột thép 100×100 @4m", "端部鋼桁架": "Vì kèo thép", "視角": "Góc nhìn", "顯示": "Hiển thị", "單指旋轉・雙指縮放／平移": "1 ngón: xoay · 2 ngón: phóng to / di chuyển", "全區鳥瞰": "Toàn khu", "住宅近看": "Cận cảnh nhà", "正面": "Mặt trước", "後側樓梯": "Cầu thang sau", "後院": "Sân sau", "俯視（同 Google 地圖方位）": "Nhìn từ trên (theo Google Maps)", "屋頂": "Mái", "屋頂琉璃瓦": "Mái ngói men", "掛瓦條 li tô @0.32m": "Li tô @0,32m", "入口平台": "Sảnh trước", "天井採光": "Giếng trời", "客廳室內": "Trong phòng khách", "欄間（木格霧玻璃）": "Ô thoáng gỗ + kính mờ", "廚房門": "Cửa bếp", "無障礙坡道 1:12": "Dốc xe lăn 1:12", "雙開大門": "Cửa đôi", "柱梁標示": "Cột dầm", "家具": "Nội thất", "空間標籤": "Nhãn phòng", "標籤": "Nhãn", "日照：": "Nắng: ", "上午": "sáng", "中午": "trưa", "下午": "chiều"};
 let LANG='zh';
 try{const v=localStorage.getItem('vn-house-lang'); if(v) LANG=v;}catch(e){}
 function tr(t){return LANG==='vi'?(VI[t]||t):t;}
@@ -2377,7 +2377,7 @@ label('水塔A 1000L（主臥衛浴＋後院澆灌）',1.45,25.0,2.25); label('�
 label('室內樓梯（往二樓）',2.8,11.0,FL+2.6); label('防墜網（護欄包覆＋開口水平網）',7.0,13.3,BT+1.45).userData.rs=true; label('長條家電櫃（上下櫃）',9.0,18.9,FL+2.55); label('主臥門',9.5,17.55,FL+2.3); label('樓梯下收納（臥室1）',2.4,12.3,FL+1.2); label('後門雨遮',7.8,22.8,FL+3.1); label('入口平台',6.0,9.1,FL+0.35); label('欄間（木格霧玻璃）',6.8,17.0,FL+2.9); label('廚房門',8.85,17.0,FL+2.0); label('無障礙坡道 1:12',10.0,8.0,1.2); label('雙開大門',6.1,9.95,FL+2.75); label('洗衣區',6.9,22.6,1.3); label('汽車位',3,5.75,2.0); label('機車棚',11.6,1.8,3.1); label('前院',11.5,6.5,0.5);
 label('側邊通道',14,16,0.5); label('曬衣區',8.5,25.2,0.5); label('果園',5.5,37,0.6);
 label('雞舍',13,32,2.9); label('放養區',13,38,2.1); label('道路',7.5,-3.5,0.4); label('大門 6m',5.5,0.3,2.3);
-const stLabels=[label('柱 220×220',13,10,BT+0.5,'st'),label('外牆 220',1,14,BB-0.4,'st'),label('內牆 110',4.5,20.0,BB-0.4,'st'),label('大梁 220×400',7,22,BT+0.4,'st')];
+const stLabels=[label('柱 400×400',13,10,BT+0.5,'st'),label('外牆 220',1,14,BB-0.4,'st'),label('內牆 110',4.5,20.0,BB-0.4,'st'),label('大梁 250×450',7,22,BT+0.4,'st')];
 const rs=new THREE.Group(); scene.add(rs); rs.visible=false;
 // ===== 延伸屋頂：側邊通道深屋簷＋後院（樓梯、曬衣區）延伸屋頂 =====
 (function(){
@@ -2659,7 +2659,7 @@ const tourBounds=tourMeshes.map(m=>({m,b:new THREE.Box3().setFromObject(m)}));
 const ray=new THREE.Raycaster(),down=new THREE.Vector3(0,-1,0);
 function tourVisible(m){for(let p=m;p;p=p.parent){if(!p.visible)return false;}return !m.userData.walkDoor;}
 // Axis-aligned boxes are used for body collision; sloped stair slabs are floor-only.
-const obstacles=tourMeshes.filter(m=>m.geometry.type==='BoxGeometry'&&Math.abs(m.rotation.x)+Math.abs(m.rotation.y)+Math.abs(m.rotation.z)<.001).map(m=>({m,b:new THREE.Box3().setFromObject(m)}));
+const obstacles=tourMeshes.filter(m=>!m.userData.beam&&m.geometry.type==='BoxGeometry'&&Math.abs(m.rotation.x)+Math.abs(m.rotation.y)+Math.abs(m.rotation.z)<.001).map(m=>({m,b:new THREE.Box3().setFromObject(m)}));
 function supportedHeight(x,z,y){
   ray.set(new THREE.Vector3(x,y+.235,z),down);ray.far=.49;
   const candidates=tourBounds.filter(({m,b})=>tourVisible(m)&&x>=b.min.x&&x<=b.max.x&&z>=b.min.z&&z<=b.max.z&&b.max.y>=y-.255&&b.min.y<=y+.235).map(v=>v.m);
