@@ -13,18 +13,18 @@ for(let z=11.5;z>=10.5;z-=.02){const h=t.supportedHeight(-1.4,z,y);assert(h!==nu
 for(let x=1.4;x<=4.3;x+=.02){const h=t.supportedHeight(-x,10.5,y);assert(h!==null);assert(t.canStand(-x,10.5,h));y=h;}assert(y<1.1);assert(!t.canStand(-7,14.3,4.7),'void blocked');
 // W-first + click-to-look, without a held mouse button.
 t.walk.keys.clear();c.window.fire('keydown',{code:'KeyW',target:{tagName:'CANVAS'}});assert(t.walk.keys.has('KeyW'));
-t.renderer.domElement.fire('click',{button:0,clientX:0,clientY:50});let yaw=t.walk.yaw;
-document.fire('mousemove',{target:t.renderer.domElement,buttons:0,clientX:175,clientY:50});assert(Math.abs((yaw-t.walk.yaw)-1.575)<1e-9);assert(t.walk.keys.has('KeyW'));
+c.window.fire('pointerdown',{pointerType:'mouse',target:t.renderer.domElement,button:0,clientX:0,clientY:50});let yaw=t.walk.yaw;
+c.window.fire('pointermove',{pointerType:'mouse',target:t.renderer.domElement,buttons:0,clientX:175,clientY:50});assert(Math.abs((yaw-t.walk.yaw)-1.575)<1e-9);assert(t.walk.keys.has('KeyW'));
 // Acquiring pointer lock preserves the W key and uses unbounded relative motion.
 document.pointerLockElement=t.renderer.domElement;document.fire('pointerlockchange');assert(t.walk.keys.has('KeyW'));yaw=t.walk.yaw;
-document.fire('mousemove',{movementX:350,movementY:0});assert(Math.abs((yaw-t.walk.yaw)-3.15)<1e-9);
+c.window.fire('mousemove',{movementX:350,movementY:0});assert(Math.abs((yaw-t.walk.yaw)-3.15)<1e-9);
 document.exitPointerLock=()=>{document.pointerLockElement=null;document.fire('pointerlockchange');};
 c.window.fire('keydown',{code:'Escape',target:{tagName:'CANVAS'}});assert(t.walk.active);yaw=t.walk.yaw;
-document.fire('mousemove',{target:t.renderer.domElement,clientX:600,clientY:50});assert.equal(t.walk.yaw,yaw);
+c.window.fire('pointermove',{pointerType:'mouse',target:t.renderer.domElement,clientX:600,clientY:50});assert.equal(t.walk.yaw,yaw);
 // Click-first then W also works; second click releases look.
-c.window.fire('keyup',{code:'KeyW'});t.renderer.domElement.fire('click',{button:0,clientX:0,clientY:50});c.window.fire('keydown',{code:'KeyW',target:{tagName:'CANVAS'}});yaw=t.walk.yaw;
-document.fire('mousemove',{target:t.renderer.domElement,clientX:350,clientY:50});assert(Math.abs((yaw-t.walk.yaw)-3.15)<1e-9);assert(t.walk.keys.has('KeyW'));
-t.renderer.domElement.fire('click',{button:0,clientX:350,clientY:50});c.window.fire('keyup',{code:'KeyW'});yaw=t.walk.yaw;document.fire('mousemove',{target:t.renderer.domElement,clientX:700,clientY:50});assert.equal(t.walk.yaw,yaw);
+c.window.fire('keyup',{code:'KeyW'});c.window.fire('pointerdown',{pointerType:'mouse',target:t.renderer.domElement,button:0,clientX:0,clientY:50});c.window.fire('keydown',{code:'KeyW',target:{tagName:'CANVAS'}});yaw=t.walk.yaw;
+c.window.fire('pointermove',{pointerType:'mouse',target:t.renderer.domElement,clientX:350,clientY:50});assert(Math.abs((yaw-t.walk.yaw)-3.15)<1e-9);assert(t.walk.keys.has('KeyW'));
+c.window.fire('pointerdown',{pointerType:'mouse',target:t.renderer.domElement,button:0,clientX:350,clientY:50});c.window.fire('keyup',{code:'KeyW'});yaw=t.walk.yaw;c.window.fire('pointermove',{pointerType:'mouse',target:t.renderer.domElement,clientX:700,clientY:50});assert.equal(t.walk.yaw,yaw);
 // Independent fingers: releasing look must not release movement.
 t.movePad.fire('pointerdown',{pointerType:'touch',pointerId:1,button:0,clientX:50,clientY:50});
 t.movePad.fire('pointermove',{pointerType:'touch',pointerId:1,clientX:50,clientY:15});assert.equal(t.walk.stick.y,-1);
