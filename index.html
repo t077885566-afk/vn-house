@@ -2508,7 +2508,10 @@ const CT_WARM=0xFFC98E, CT_NEU=0xFFE9D2, CT_ALTAR=0xFFB070;   // 約 2700K／380
   const cd=new THREE.Mesh(new THREE.CylinderGeometry(0.1,0.1,0.02,16),mLamp); cd.position.set(-5.65,BT-0.16,9.1); scene.add(cd); lamp(5.65,9.0,BT-0.5,scene,CT_WARM,0.9,6);
   const bd=new THREE.Mesh(new THREE.BoxGeometry(0.25,0.06,0.12),mLamp); bd.position.set(-7.8,FL+2.4,22.18); scene.add(bd);
   // —— 二樓軌道燈（閣樓兩條掛在繫梁下、樓梯間一條）＋露臺壁燈 ——
-  track(5.0,12.6,5.0,21.4,BT+2.29,7,rs,mLampN); track(9.0,12.6,9.0,21.4,BT+2.29,7,rs,mLampN); track(1.4,11.4,5.1,11.4,BT+2.47,3,rs,mLamp);
+  // 二樓平釘天花板：輕鋼架＋石膏板，釘在繫梁底（BT+2.29）；x 3.14–10.86（與繫梁同範圍）、z 12.0–22.11，蓋住屋架 C 鋼與客廳挑高上方
+  const yCl=BT+2.27;
+  box(3.14,10.86,12.0,22.11,yCl-0.02,yCl,muji.ceiling,roof);
+  track(5.0,12.6,5.0,21.4,yCl,7,roof,mLampN); track(9.0,12.6,9.0,21.4,yCl,7,roof,mLampN); track(1.4,11.4,5.1,11.4,BT+2.47,3,rs,mLamp);
   lamp(7.0,16.5,BT+1.9,rs,CT_NEU,1.1,9);
   const wl=new THREE.Mesh(new THREE.BoxGeometry(0.14,0.22,0.08),mLamp); wl.position.set(-9.25,BT+2.0,11.94); rs.add(wl); lamp(5.5,11.4,BT+2.1,rs,CT_WARM,0.85,6);
   const tl=label('二樓軌道燈',7.0,17.5,BT+2.55); tl.userData.rs=true;
