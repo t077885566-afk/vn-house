@@ -2649,9 +2649,9 @@ function updCompass(){_a.copy(controls.target).project(camera); _b.copy(controls
 function resize(){const w=viewer.clientWidth,h=viewer.clientHeight; renderer.setSize(w,h); labelR.setSize(w,h); camera.aspect=w/h; camera.updateProjectionMatrix();}
 new ResizeObserver(resize).observe(viewer); resize();
 // First-person tour: metres, 1.60 m eye height, 0.18 m radius, no jumping.
-const walk={active:false,x:-5.75,z:11.4,y:FL+.015,yaw:Math.PI,pitch:0,last:0,keys:new Set(),stick:{x:0,y:0}};
+const walk={mode:'first',active:false,x:-5.75,z:11.4,y:FL+.015,yaw:Math.PI,pitch:0,last:0,keys:new Set(),stick:{x:0,y:0}};
 const walkBar=document.createElement('div');
-walkBar.innerHTML='<button id="walk-enter">進入看屋</button> <button id="walk-reset" hidden>回到入口</button> <button id="walk-exit" hidden>返回俯視</button> <span id="walk-help" role="status"></span>';
+walkBar.innerHTML='<button id="walk-enter">第一人稱看屋</button> <button id="walk-third">小人物看屋</button> <button id="walk-mode" hidden>切換第三人稱</button> <button id="walk-reset" hidden>回到入口</button> <button id="walk-exit" hidden>返回俯視</button> <span id="walk-help" role="status"></span>';
 viewer.before(walkBar);
 const walkStyle=document.createElement('style');walkStyle.textContent=`
 #walk-help{font-size:13px} .walk-pad{position:absolute;bottom:18px;width:100px;height:100px;border-radius:50%;background:#ede8deaa;border:2px solid #746b5c;touch-action:none;z-index:8;display:none;align-items:center;justify-content:center;color:#333;user-select:none}
@@ -2689,26 +2689,76 @@ function canStand(x,z,y){
   // Reject unsupported footprint edges rather than letting visitors fall into the void.
   return [[0,0],[radius,0],[-radius,0],[0,radius],[0,-radius]].every(([a,b])=>supportedHeight(x+a,z+b,y)!==null);
 }
-function walkCamera(){camera.position.set(walk.x,walk.y+1.6,walk.z);camera.rotation.order='YXZ';camera.rotation.set(walk.pitch,walk.yaw,0);controls.target.copy(camera.position).add(new THREE.Vector3(0,0,-1).applyQuaternion(camera.quaternion));}
+// Lightweight original mannequin: 1.70 m tall, no downloaded assets.
+const avatar=new THREE.Group();avatar.name='tour-avatar-170cm';avatar.visible=false;scene.add(avatar);
+const avatarCloth=M(0xA5AA96,{roughness:.95}),avatarSkin=M(0xDFC6AD),avatarPants=M(0x555B58),avatarShoe=M(0x48443D);
+function avatarPart(g,m,x,y,z,parent=avatar){const mesh=new THREE.Mesh(g,m);mesh.position.set(x,y,z);mesh.castShadow=true;mesh.receiveShadow=true;parent.add(mesh);return mesh;}
+avatarPart(new THREE.CylinderGeometry(.18,.145,.46,10),avatarCloth,0,1.16,0);
+avatarPart(new THREE.SphereGeometry(.145,12,8),avatarSkin,0,1.555,0);
+// Small nose identifies the character's forward direction (-Z).
+avatarPart(new THREE.SphereGeometry(.035,8,6),avatarSkin,0,1.55,-.14);
+const avatarLimbs={};
+for(const [side,x] of [['left',-.115],['right',.115]]){
+ const leg=new THREE.Group();leg.position.set(x,.94,0);avatar.add(leg);avatarLimbs[side+'Leg']=leg;
+ avatarPart(new THREE.CylinderGeometry(.07,.055,.76,8),avatarPants,0,-.38,0,leg);
+ avatarPart(new THREE.BoxGeometry(.14,.12,.25),avatarShoe,0,-.88,-.045,leg);
+ const arm=new THREE.Group();arm.position.set(side==='left'?-.23:.23,1.34,0);avatar.add(arm);avatarLimbs[side+'Arm']=arm;
+ avatarPart(new THREE.CylinderGeometry(.055,.045,.53,8),avatarCloth,0,-.265,0,arm);
+ avatarPart(new THREE.SphereGeometry(.052,8,6),avatarSkin,0,-.56,0,arm);
+}
+let avatarStride=0,avatarSwing=0;
+function animateAvatar(dx,dz,dt){
+ const distance=Math.hypot(dx,dz);avatar.position.set(walk.x,walk.y,walk.z);
+ if(distance>.00001){avatar.rotation.y=Math.atan2(-dx,-dz);avatarStride+=distance*8;}
+ const target=distance>.00001?Math.sin(avatarStride)*.45:0;
+ avatarSwing+=(target-avatarSwing)*Math.min(1,dt*18);
+ avatarLimbs.leftLeg.rotation.x=avatarSwing;avatarLimbs.rightLeg.rotation.x=-avatarSwing;
+ avatarLimbs.leftArm.rotation.x=-avatarSwing*.75;avatarLimbs.rightArm.rotation.x=avatarSwing*.75;
+}
+const followRay=new THREE.Raycaster();
+function thirdPersonCamera(){
+ const target=new THREE.Vector3(walk.x,walk.y+1.25,walk.z);
+ const pitch=Math.max(-.45,Math.min(.55,walk.pitch)),distance=2.2;
+ const desired=target.clone().add(new THREE.Vector3(Math.sin(walk.yaw)*Math.cos(pitch)*distance,.6-Math.sin(pitch)*distance,Math.cos(walk.yaw)*Math.cos(pitch)*distance));
+ const delta=desired.clone().sub(target),length=delta.length(),direction=delta.clone().normalize();
+ let safe=length;
+ // Center and near-plane offsets keep the camera out of nearby walls and ceilings.
+ const side=new THREE.Vector3(Math.cos(walk.yaw),0,-Math.sin(walk.yaw));
+ for(const offset of [new THREE.Vector3(),side.clone().multiplyScalar(.16),side.clone().multiplyScalar(-.16),new THREE.Vector3(0,.12,0),new THREE.Vector3(0,-.12,0)]){
+   followRay.set(target.clone().add(offset),direction);followRay.far=length+.18;
+   const hits=followRay.intersectObjects(tourMeshes,false);
+   for(const hit of hits){if(!tourVisible(hit.object))continue;safe=Math.min(safe,Math.max(.08,hit.distance-.2));break;}
+ }
+ camera.position.copy(target).addScaledVector(direction,safe);camera.lookAt(target);controls.target.copy(target);
+ // In a tight corridor, hide the mannequin instead of filling the view with its back.
+ avatar.visible=walk.active&&walk.mode==='third'&&safe>.5;
+}
+
+function walkCamera(){
+  if(walk.mode==='third'){thirdPersonCamera();return;}avatar.visible=false;
+  camera.position.set(walk.x,walk.y+1.6,walk.z);camera.rotation.order='YXZ';camera.rotation.set(walk.pitch,walk.yaw,0);controls.target.copy(camera.position).add(new THREE.Vector3(0,0,-1).applyQuaternion(camera.quaternion));}
 function clearWalkInput(){if(typeof walkMouseDrag!=='undefined')walkMouseDrag=null;walk.keys.clear();walk.stick.x=walk.stick.y=0;walk.last=0;}
-function resetWalk(){clearWalkInput();Object.assign(walk,{x:-5.75,z:11.4,y:FL+.015,yaw:Math.PI,pitch:0});walkCamera();}
-function enterWalk(){
-  if(walk.active)return;
+function resetWalk(){clearWalkInput();Object.assign(walk,{x:-5.75,z:11.4,y:FL+.015,yaw:Math.PI,pitch:0});avatarStride=avatarSwing=0;avatar.rotation.y=walk.yaw;animateAvatar(0,0,0);walkCamera();}
+function enterWalk(mode='first'){
+  if(walk.active){setWalkMode(mode);return;}walk.mode=mode;
   savedWalk={p:camera.position.clone(),t:controls.target.clone(),fov:camera.fov,near:camera.near,roof:roof.visible,rs:rs.visible,doors:tourMeshes.filter(m=>m.userData.walkDoor).map(m=>[m,m.visible])};
   anim=null;controls.enabled=false;walk.active=true;roof.visible=true;rs.visible=true;
   savedWalk.doors.forEach(([m])=>m.visible=false);camera.fov=65;camera.near=.04;camera.updateProjectionMatrix();
   viewer.classList.add('walking');enterButton.hidden=true;exitButton.hidden=resetButton.hidden=false;
   setWalkHelp();
-  document.querySelectorAll('[id^="t-"]:not(#t-atrium-daylight)').forEach(b=>{b.dataset.walkDisabled=String(b.disabled);b.disabled=true;});resetWalk();
+  document.querySelectorAll('[id^="t-"]:not(#t-atrium-daylight)').forEach(b=>{b.dataset.walkDisabled=String(b.disabled);b.disabled=true;});resetWalk();thirdButton.hidden=true;setWalkMode(mode);
 }
 function exitWalk(){
-  if(!walk.active)return;walk.active=false;clearWalkInput();viewer.classList.remove('walking');
+  if(!walk.active)return;walk.active=false;avatar.visible=false;thirdButton.hidden=false;modeButton.hidden=true;clearWalkInput();viewer.classList.remove('walking');
   savedWalk.doors.forEach(([m,v])=>m.visible=v);roof.visible=savedWalk.roof;rs.visible=savedWalk.rs;
   camera.fov=savedWalk.fov;camera.near=savedWalk.near;camera.updateProjectionMatrix();camera.position.copy(savedWalk.p);controls.target.copy(savedWalk.t);controls.enabled=true;controls.update();
   document.querySelectorAll('[id^="t-"]:not(#t-atrium-daylight)').forEach(b=>{b.disabled=b.dataset.walkDisabled==='true';delete b.dataset.walkDisabled;});
   enterButton.hidden=false;exitButton.hidden=resetButton.hidden=true;help.textContent='';
 }
-enterButton.onclick=enterWalk;exitButton.onclick=exitWalk;resetButton.onclick=resetWalk;
+const thirdButton=document.getElementById('walk-third'),modeButton=document.getElementById('walk-mode');
+function setWalkMode(mode){walk.mode=mode;walkCamera();modeButton.textContent=mode==='third'?'切換第一人稱':'切換第三人稱';modeButton.hidden=!walk.active;setWalkHelp();}
+thirdButton.onclick=()=>enterWalk('third');modeButton.onclick=()=>setWalkMode(walk.mode==='third'?'first':'third');
+enterButton.onclick=()=>enterWalk('first');exitButton.onclick=exitWalk;resetButton.onclick=resetWalk;
 const walkCodes=['KeyW','KeyA','KeyS','KeyD','ArrowUp','ArrowLeft','ArrowDown','ArrowRight'];
 window.addEventListener('keydown',e=>{if(!walk.active||/INPUT|TEXTAREA|SELECT/.test(e.target.tagName))return;if(e.code==='Escape'){exitWalk();return;}if(walkCodes.includes(e.code)){e.preventDefault();walk.keys.add(e.code);}});
 window.addEventListener('keyup',e=>walk.keys.delete(e.code));window.addEventListener('blur',clearWalkInput);document.addEventListener('visibilitychange',clearWalkInput);
@@ -2751,6 +2801,7 @@ window.addEventListener('mouseup',e=>{if(e.button===0)walkMouseDrag=null;});
 window.addEventListener('blur',()=>{walkMouseDrag=null;});
 document.addEventListener('visibilitychange',()=>{walkMouseDrag=null;});
 function updateWalk(now){
+ const startX=walk.x,startZ=walk.z;
  const dt=walk.last?Math.min((now-walk.last)/1000,.05):0;walk.last=now;
  const pressed=(a,b)=>walk.keys.has(a)||walk.keys.has(b);
  let forward=Number(pressed('KeyW','ArrowUp'))-Number(pressed('KeyS','ArrowDown'))-walk.stick.y;
@@ -2764,7 +2815,7 @@ function updateWalk(now){
    if(!a&&!b)continue;const x=walk.x+a,z=walk.z+b,y=supportedHeight(x,z,walk.y);
    if(y!==null&&canStand(x,z,y)){walk.x=x;walk.z=z;walk.y=y;}
  }
- walkCamera();
+ animateAvatar(walk.x-startX,walk.z-startZ,dt);walkCamera();
 }
 
 go('house',true);
@@ -2782,5 +2833,6 @@ requestAnimationFrame(loop);
 
 </body>
 </html>
+
 
 
