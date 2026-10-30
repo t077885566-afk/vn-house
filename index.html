@@ -2737,31 +2737,78 @@ function canStand(x,z,y){
   // Reject unsupported footprint edges rather than letting visitors fall into the void.
   return [[0,0],[radius,0],[-radius,0],[0,radius],[0,-radius]].every(([a,b])=>supportedHeight(x+a,z+b,y)!==null);
 }
-// Lightweight original mannequin: 1.70 m tall, no downloaded assets.
+// Articulated original mannequin: 1.70 m tall, no downloaded assets. Forward is -Z; positive rotation.x swings a limb forward.
 const avatar=new THREE.Group();avatar.name='tour-avatar-170cm';avatar.visible=false;scene.add(avatar);
-const avatarCloth=M(0xA5AA96,{roughness:.95}),avatarSkin=M(0xDFC6AD),avatarPants=M(0x555B58),avatarShoe=M(0x48443D);
-function avatarPart(g,m,x,y,z,parent=avatar){const mesh=new THREE.Mesh(g,m);mesh.position.set(x,y,z);mesh.castShadow=true;mesh.receiveShadow=true;parent.add(mesh);return mesh;}
-avatarPart(new THREE.CylinderGeometry(.18,.145,.46,10),avatarCloth,0,1.16,0);
-avatarPart(new THREE.SphereGeometry(.145,12,8),avatarSkin,0,1.555,0);
-// Small nose identifies the character's forward direction (-Z).
-avatarPart(new THREE.SphereGeometry(.035,8,6),avatarSkin,0,1.55,-.14);
-const avatarLimbs={};
-for(const [side,x] of [['left',-.115],['right',.115]]){
- const leg=new THREE.Group();leg.position.set(x,.94,0);avatar.add(leg);avatarLimbs[side+'Leg']=leg;
- avatarPart(new THREE.CylinderGeometry(.07,.055,.76,8),avatarPants,0,-.38,0,leg);
- avatarPart(new THREE.BoxGeometry(.14,.12,.25),avatarShoe,0,-.88,-.045,leg);
- const arm=new THREE.Group();arm.position.set(side==='left'?-.23:.23,1.34,0);avatar.add(arm);avatarLimbs[side+'Arm']=arm;
- avatarPart(new THREE.CylinderGeometry(.055,.045,.53,8),avatarCloth,0,-.265,0,arm);
- avatarPart(new THREE.SphereGeometry(.052,8,6),avatarSkin,0,-.56,0,arm);
+const avatarRig=new THREE.Group();avatar.add(avatarRig);
+const avatarCloth=M(0x12443A,{roughness:.92}),avatarSkin=M(0x8A4A2E,{roughness:.62}),avatarPants=M(0x070A10,{roughness:.9}),avatarShoe=M(0x0D0B0A,{roughness:.7}),avatarSole=M(0xE6E1D6,{roughness:.8}),avatarHair=M(0x0E0A08,{roughness:.8,side:THREE.DoubleSide}),avatarDark=M(0x050403,{roughness:.5}),avatarLip=M(0x70281F,{roughness:.6});
+const avatarBall=new THREE.SphereGeometry(1,18,12);
+function avatarPart(g,m,x,y,z,parent=avatarRig,shadow=true){const mesh=new THREE.Mesh(g,m);mesh.position.set(x,y,z);mesh.castShadow=shadow;mesh.receiveShadow=shadow;parent.add(mesh);return mesh;}
+function avatarBlob(m,x,y,z,rx,ry,rz,parent=avatarRig,shadow=true){const mesh=avatarPart(avatarBall,m,x,y,z,parent,shadow);mesh.scale.set(rx,ry,rz);return mesh;}
+function avatarJoint(x,y,z,parent){const g=new THREE.Group();g.position.set(x,y,z);parent.add(g);return g;}
+// Pelvis and belt (static), torso pivots at the waist.
+avatarBlob(avatarPants,0,.93,0,.15,.09,.105);
+const avatarTorso=avatarJoint(0,.98,0,avatarRig);
+const avatarChest=avatarPart(new THREE.CylinderGeometry(.152,.13,.4,26),avatarCloth,0,.135,0,avatarTorso); // T-shirt body: broad chest tapering to the waist, straight hem
+avatarChest.scale.set(1,1,.75);
+avatarBlob(avatarCloth,0,.335,0,.152,.07,.114,avatarTorso);                       // rounded shoulder line
+avatarPart(new THREE.CylinderGeometry(.043,.047,.1,14),avatarSkin,0,.43,0,avatarTorso);  // neck
+const collar=avatarPart(new THREE.TorusGeometry(.052,.012,8,18),avatarCloth,0,.395,0,avatarTorso);collar.rotation.x=Math.PI/2;collar.scale.set(1,1.1,1);
+// Head, face and hair.
+const avatarHead=avatarJoint(0,.595,0,avatarTorso);
+avatarBlob(avatarSkin,0,0,0,.08,.113,.097,avatarHead);                               // skull
+avatarBlob(avatarSkin,0,-.062,-.012,.066,.06,.077,avatarHead);                       // jaw
+for(const sx of [-1,1]){
+ avatarBlob(avatarSkin,sx*.079,-.005,.006,.012,.028,.018,avatarHead,false);         // ears
+ avatarBlob(avatarDark,sx*.029,.008,-.0865,.0095,.0095,.0095,avatarHead,false);     // eyes
+ avatarPart(new THREE.BoxGeometry(.028,.005,.007),avatarHair,sx*.03,.029,-.0875,avatarHead,false); // brows
 }
-let avatarStride=0,avatarSwing=0;
+avatarBlob(avatarSkin,0,-.014,-.096,.013,.02,.019,avatarHead,false);                 // nose
+avatarPart(new THREE.BoxGeometry(.032,.006,.006),avatarLip,0,-.045,-.0885,avatarHead,false); // mouth
+const hair=avatarPart(new THREE.SphereGeometry(1,24,14,0,Math.PI*2,0,Math.PI*.4),avatarHair,0,.003,.003,avatarHead);
+hair.scale.set(.0865,.1215,.1045);                                                    // short crop over the crown, hairline above the brows
+avatarBlob(avatarHair,0,-.02,.035,.083,.074,.066,avatarHead);                         // back of the head down to the nape
+for(const sx of [-1,1])avatarBlob(avatarHair,sx*.074,.026,.0,.016,.044,.052,avatarHead,false); // temples above the ears
+const avatarLimbs={},avatarKnees={},avatarElbows={};
+for(const [side,sx] of [['left',-1],['right',1]]){
+ // Leg: hip -> thigh -> knee -> shin -> ankle/shoe. All pivots swing about X.
+ const leg=avatarJoint(sx*.088,.93,0,avatarRig);avatarLimbs[side+'Leg']=leg;
+ avatarBlob(avatarPants,0,0,0,.08,.08,.08,leg);
+ avatarPart(new THREE.CylinderGeometry(.082,.062,.45,14),avatarPants,0,-.225,0,leg);
+ const knee=avatarJoint(0,-.45,0,leg);avatarKnees[side]=knee;
+ avatarBlob(avatarPants,0,0,0,.063,.063,.063,knee);
+ avatarPart(new THREE.CylinderGeometry(.06,.043,.4,12),avatarPants,0,-.2,0,knee);
+ const foot=avatarJoint(0,-.4,0,knee);avatarKnees[side+'Foot']=foot;
+ avatarPart(new THREE.BoxGeometry(.1,.06,.21),avatarShoe,0,-.045,-.035,foot);
+ avatarBlob(avatarShoe,0,-.052,-.12,.05,.03,.045,foot);
+ avatarPart(new THREE.BoxGeometry(.104,.018,.23),avatarSole,0,-.071,-.05,foot);
+ // Arm: shoulder -> short sleeve + upper arm -> elbow -> forearm -> hand.
+ const arm=avatarJoint(sx*.172,.375,0,avatarTorso);arm.rotation.z=sx*.05;avatarLimbs[side+'Arm']=arm;
+ avatarBlob(avatarCloth,0,0,0,.046,.046,.046,arm);
+ avatarPart(new THREE.CylinderGeometry(.045,.044,.14,12),avatarCloth,0,-.07,0,arm);
+ avatarPart(new THREE.CylinderGeometry(.039,.036,.15,10),avatarSkin,0,-.215,0,arm);
+ const elbow=avatarJoint(0,-.29,0,arm);avatarElbows[side]=elbow;
+ avatarBlob(avatarSkin,0,0,0,.037,.037,.037,elbow);
+ avatarPart(new THREE.CylinderGeometry(.035,.028,.25,10),avatarSkin,0,-.125,0,elbow);
+ const hand=avatarJoint(0,-.26,0,elbow);
+ avatarBlob(avatarSkin,0,-.04,0,.017,.05,.037,hand);                                  // palm and fingers
+ avatarBlob(avatarSkin,-sx*.012,-.02,-.03,.011,.026,.012,hand,false);                 // thumb
+}
+let avatarStride=0,avatarSwing=0,avatarBreath=0;   // avatarSwing is the 0..1 gait amplitude
 function animateAvatar(dx,dz,dt){
- const distance=Math.hypot(dx,dz);avatar.position.set(walk.x,walk.y,walk.z);
- if(distance>.00001){avatar.rotation.y=Math.atan2(-dx,-dz);avatarStride+=distance*8;}
- const target=distance>.00001?Math.sin(avatarStride)*.45:0;
- avatarSwing+=(target-avatarSwing)*Math.min(1,dt*18);
- avatarLimbs.leftLeg.rotation.x=avatarSwing;avatarLimbs.rightLeg.rotation.x=-avatarSwing;
- avatarLimbs.leftArm.rotation.x=-avatarSwing*.75;avatarLimbs.rightArm.rotation.x=avatarSwing*.75;
+ const distance=Math.hypot(dx,dz),moving=distance>.00001;avatar.position.set(walk.x,walk.y,walk.z);
+ if(moving){avatar.rotation.y=Math.atan2(-dx,-dz);avatarStride+=distance*4.6;}
+ avatarSwing+=((moving?1:0)-avatarSwing)*Math.min(1,dt*18);avatarBreath+=dt;
+ const amp=avatarSwing,s=Math.sin(avatarStride),c=Math.cos(avatarStride);
+ for(const [side,ph] of [['left',1],['right',-1]]){
+  avatarLimbs[side+'Leg'].rotation.x=amp*.42*s*ph;                                    // hip swing
+  avatarKnees[side].rotation.x=-amp*.75*Math.max(0,c*ph);                             // knee folds while the leg swings through
+  avatarKnees[side+'Foot'].rotation.x=-avatarKnees[side].rotation.x*.45;              // keep the toe from dragging
+  const arm=avatarLimbs[side+'Arm'];arm.rotation.x=-amp*.34*s*ph;                     // opposite arm to leg
+  avatarElbows[side].rotation.x=.1+amp*(.15+Math.max(0,arm.rotation.x)*.9);
+ }
+ avatarRig.position.y=amp*.012*Math.cos(2*avatarStride);                              // pelvis rises as the legs cross
+ avatarTorso.rotation.y=amp*.1*s;avatarTorso.rotation.x=-.05*amp;avatarHead.rotation.y=-avatarTorso.rotation.y*.6;
+ {const b=Math.sin(avatarBreath*2.2);avatarChest.scale.set(1+.006*b,1,.75*(1+.015*b));}
 }
 const followRay=new THREE.Raycaster();
 function thirdPersonCamera(){
