@@ -1655,6 +1655,7 @@ box(0,FT,0,50,0,FH,mat.fence); box(15-FT,15,0,50,0,FH,mat.fence); box(0,15,50-FT
 box(1,8.5,0,2.2,0,0.02,mat.pave);
 
 // 住宅基座與地坪
+const roofUnderY=x=>BT+0.06+KW+((x<=7)?(x-0.4):(13.6-x))*2.6/6.6-0.05;   // 屋面板底：山牆與側牆頂接到這條線，牆與屋頂結構之間不留縫
 const FL=0.8, BB=4.25, BT=4.7, KW=1.5;   // KW：閣樓側牆加高 // 地坪、梁底、梁頂（室內樓高：地坪至梁頂 3.9m）
 box(1-0.11,13+0.11,10-0.11,22+0.11,0,FL,mat.plinth);
 box(1.11,12.89,12.11,21.89,FL,FL+0.01,mat.tile);
@@ -1963,7 +1964,7 @@ const roof=new THREE.Group(); scene.add(roof);
   const LOUV={12:[], 22:[[4.2,5.6,1.3,2.0],[8.4,9.8,1.3,2.0],[6.4,7.6,2.6,3.2]]};
   const mLouv=M(0x1C1D1F,{roughness:.45,metalness:.35}), mNet=M(0x2A2B2D,{transparent:true,opacity:.35,side:THREE.DoubleSide,depthWrite:false});
   [12,22].forEach(z=>{
-    const s=new THREE.Shape(); s.moveTo(-1,BT); s.lineTo(-13,BT); s.lineTo(-13,BT+KW); s.lineTo(-7,BT+KW+rise*6/run); s.lineTo(-1,BT+KW); s.lineTo(-1,BT);
+    const s=new THREE.Shape(); s.moveTo(-0.89,BT); s.lineTo(-13.11,BT); s.lineTo(-13.11,roofUnderY(13.11)); s.lineTo(-7,roofUnderY(7)); s.lineTo(-0.89,roofUnderY(0.89)); s.lineTo(-0.89,BT);   // 山牆頂沿屋面板底
     LOUV[z].forEach(([a,b,y0,y1])=>{const h=new THREE.Path(); h.moveTo(-a,BT+y0); h.lineTo(-b,BT+y0); h.lineTo(-b,BT+y1); h.lineTo(-a,BT+y1); h.lineTo(-a,BT+y0); s.holes.push(h);});
     if(z===12) [[4.45,5.3],[5.6,9.0]].forEach(([a,b])=>{const h=new THREE.Path(); h.moveTo(-a,BT+0.03); h.lineTo(-b,BT+0.03); h.lineTo(-b,BT+2.2); h.lineTo(-a,BT+2.2); h.lineTo(-a,BT+0.03); s.holes.push(h);});   // 樓梯間→閣樓開口、日式玻璃拉門
     const g=new THREE.Mesh(new THREE.ShapeGeometry(s),mat.gable); g.position.z=z; roof.add(g);
@@ -2059,6 +2060,10 @@ const mCeil=M(0xF4F2EE,{side:THREE.DoubleSide});
 })();
 // 閣樓加高：兩側 1.5m 側牆（knee wall）＋頂部圈梁
 box(0.89,1.11,12.0,22.11,BT,BT+KW,mat.wall,roof); box(12.89,13.11,12.0,22.11,BT,BT+KW,mat.wall,roof);
+[[0.89,1.11],[12.89,13.11]].forEach(([xa,xb])=>{   // 側牆頂（圈梁以上）砌到屋面板底，屋架坐在圈梁上、被牆包住
+  const sh=new THREE.Shape(); sh.moveTo(-xa,BT+KW); sh.lineTo(-xb,BT+KW); sh.lineTo(-xb,roofUnderY(xb)); sh.lineTo(-xa,roofUnderY(xa)); sh.closePath();
+  const m=new THREE.Mesh(new THREE.ExtrudeGeometry(sh,{depth:10.11,bevelEnabled:false}),mat.wall); m.position.z=12.0; m.castShadow=true; m.receiveShadow=true; roof.add(m);
+});
 box(0.87,1.13,12.0,22.11,BT+KW-0.2,BT+KW,mat.struct,roof); box(12.87,13.13,12.0,22.11,BT+KW-0.2,BT+KW,mat.struct,roof);
 // 後院水塔 ×2＋加壓馬達 ×2（曬衣區左側＝屋內朝後院看的左手邊、青龍方）＋埋地管
 (function(){
