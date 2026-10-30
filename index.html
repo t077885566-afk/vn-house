@@ -2681,7 +2681,7 @@ function canStand(x,z,y){
   return [[0,0],[radius,0],[-radius,0],[0,radius],[0,-radius]].every(([a,b])=>supportedHeight(x+a,z+b,y)!==null);
 }
 function walkCamera(){camera.position.set(walk.x,walk.y+1.6,walk.z);camera.rotation.order='YXZ';camera.rotation.set(walk.pitch,walk.yaw,0);controls.target.copy(camera.position).add(new THREE.Vector3(0,0,-1).applyQuaternion(camera.quaternion));}
-function clearWalkInput(){if(typeof walkMouseDrag!=='undefined')walkMouseDrag=null;walk.keys.clear();walk.stick.x=walk.stick.y=0;walk.last=0;}
+function clearWalkInput(){walk.keys.clear();walk.stick.x=walk.stick.y=0;walk.last=0;}
 function resetWalk(){clearWalkInput();Object.assign(walk,{x:-5.75,z:11.4,y:FL+.015,yaw:Math.PI,pitch:0});walkCamera();}
 function enterWalk(){
   if(walk.active)return;
@@ -2693,7 +2693,7 @@ function enterWalk(){
   document.querySelectorAll('[id^="t-"]:not(#t-atrium-daylight)').forEach(b=>{b.dataset.walkDisabled=String(b.disabled);b.disabled=true;});resetWalk();
 }
 function exitWalk(){
-  if(!walk.active)return;walk.active=false;clearWalkInput();viewer.classList.remove('walking');
+  if(!walk.active)return;walk.active=false;stopWalkMouseLook();clearWalkInput();viewer.classList.remove('walking');
   savedWalk.doors.forEach(([m,v])=>m.visible=v);roof.visible=savedWalk.roof;rs.visible=savedWalk.rs;
   camera.fov=savedWalk.fov;camera.near=savedWalk.near;camera.updateProjectionMatrix();camera.position.copy(savedWalk.p);controls.target.copy(savedWalk.t);controls.enabled=true;controls.update();
   document.querySelectorAll('[id^="t-"]:not(#t-atrium-daylight)').forEach(b=>{b.disabled=b.dataset.walkDisabled==='true';delete b.dataset.walkDisabled;});
@@ -2701,13 +2701,15 @@ function exitWalk(){
 }
 enterButton.onclick=enterWalk;exitButton.onclick=exitWalk;resetButton.onclick=resetWalk;
 const walkCodes=['KeyW','KeyA','KeyS','KeyD','ArrowUp','ArrowLeft','ArrowDown','ArrowRight'];
-window.addEventListener('keydown',e=>{if(!walk.active||/INPUT|TEXTAREA|SELECT/.test(e.target.tagName))return;if(e.code==='Escape'){exitWalk();return;}if(walkCodes.includes(e.code)){e.preventDefault();walk.keys.add(e.code);}});
+window.addEventListener('keydown',e=>{if(!walk.active||/INPUT|TEXTAREA|SELECT/.test(e.target.tagName))return;if(e.code==='Escape'){if(walkMouseLook)stopWalkMouseLook();else exitWalk();return;}if(walkCodes.includes(e.code)){e.preventDefault();walk.keys.add(e.code);}});
 window.addEventListener('keyup',e=>walk.keys.delete(e.code));window.addEventListener('blur',clearWalkInput);document.addEventListener('visibilitychange',clearWalkInput);
 function turnWalk(dx,dy,sensitivity=.004){
   walk.yaw-=dx*sensitivity;walk.pitch=Math.max(-1.35,Math.min(1.35,walk.pitch-dy*sensitivity));
 }
 function setWalkHelp(){
-  if(walk.active)help.textContent='電腦：WASD／方向鍵行走，按住滑鼠左鍵拖曳轉頭（高靈敏度），放開後可重新拖曳；手機：左手移動、右手滑動轉頭。Esc 返回。';
+  if(walk.active)help.textContent=walkMouseLook
+    ?'滑鼠轉向已啟用：WASD／方向鍵可同時行走；再點左鍵或 Esc 釋放滑鼠。'
+    :'電腦：左鍵點畫面啟用滑鼠轉向，WASD／方向鍵可同時行走；手機：左手移動、右手滑動轉頭。Esc 返回。';
 }
 // Each touch surface owns a distinct pointer, so movement continues while turning.
 function bindWalkPointer(el,move){let id=null,start=null,last=null;
@@ -2724,23 +2726,40 @@ function bindWalkPointer(el,move){let id=null,start=null,last=null;
  const stop=e=>{if(e.pointerId===id)cancel();};['pointerup','pointercancel','lostpointercapture'].forEach(t=>el.addEventListener(t,stop));
 }
 bindWalkPointer(movePad,true);bindWalkPointer(lookPad,false);bindWalkPointer(renderer.domElement,false);
-// Mouse look is independent of touch pointer ownership and keyboard order.
-let walkMouseDrag=null;
-renderer.domElement.addEventListener('mousedown',e=>{
-  if(!walk.active||e.button!==0)return;
+// Click-to-look is independent of key order. Acquiring mouse lock must not clear W.
+let walkMouseLook=false,walkMouseLast=null;
+function stopWalkMouseLook(){
+  walkMouseLook=false;walkMouseLast=null;
+  if(document.pointerLockElement===renderer.domElement&&document.exitPointerLock)document.exitPointerLock();
+  setWalkHelp();
+}
+renderer.domElement.addEventListener('click',e=>{
+  if(!walk.active||e.button!==0||!matchMedia('(hover:hover) and (pointer:fine)').matches)return;
   e.preventDefault();
-  walkMouseDrag={x:e.clientX,y:e.clientY};
+  if(walkMouseLook){stopWalkMouseLook();return;}
+  walkMouseLook=true;walkMouseLast={x:e.clientX,y:e.clientY};setWalkHelp();
+  if(renderer.domElement.requestPointerLock){
+    try{const pending=renderer.domElement.requestPointerLock();if(pending&&pending.catch)pending.catch(()=>{if(!walk.active)stopWalkMouseLook();else setWalkHelp();});}catch(error){setWalkHelp();}
+  }
 });
 document.addEventListener('mousemove',e=>{
-  if(!walk.active||!walkMouseDrag)return;
-  if(e.buttons!==undefined&&(e.buttons&1)===0){walkMouseDrag=null;return;}
-  e.preventDefault();
-  turnWalk(e.clientX-walkMouseDrag.x,e.clientY-walkMouseDrag.y,.009);
-  walkMouseDrag={x:e.clientX,y:e.clientY};
+  if(!walk.active||!walkMouseLook)return;
+  if(document.pointerLockElement===renderer.domElement){turnWalk(e.movementX||0,e.movementY||0,.009);return;}
+  // If lock is unsupported/denied, keep click-to-look within the viewing canvas.
+  if(e.target!==renderer.domElement){walkMouseLast=null;return;}
+  if(walkMouseLast)turnWalk(e.clientX-walkMouseLast.x,e.clientY-walkMouseLast.y,.009);
+  walkMouseLast={x:e.clientX,y:e.clientY};
 });
-window.addEventListener('mouseup',e=>{if(e.button===0)walkMouseDrag=null;});
-window.addEventListener('blur',()=>{walkMouseDrag=null;});
-document.addEventListener('visibilitychange',()=>{walkMouseDrag=null;});
+document.addEventListener('pointerlockchange',()=>{
+  if(document.pointerLockElement===renderer.domElement){
+    if(!walk.active||!walkMouseLook){document.exitPointerLock();return;}
+    walkMouseLast=null;
+  }else if(walkMouseLook){walkMouseLook=false;walkMouseLast=null;}
+  setWalkHelp();
+});
+document.addEventListener('pointerlockerror',()=>{if(walk.active)setWalkHelp();});
+window.addEventListener('blur',stopWalkMouseLook);
+document.addEventListener('visibilitychange',()=>{if(document.hidden)stopWalkMouseLook();});
 function updateWalk(now){
  const dt=walk.last?Math.min((now-walk.last)/1000,.05):0;walk.last=now;
  const pressed=(a,b)=>walk.keys.has(a)||walk.keys.has(b);
@@ -2773,5 +2792,6 @@ requestAnimationFrame(loop);
 
 </body>
 </html>
+
 
 
