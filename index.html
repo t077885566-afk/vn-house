@@ -1862,9 +1862,17 @@ wallX(10,0.89,4.39,ET,[W(2.8,3.9)],mat.wall);   // 樓梯間前窗（一般窗�
 wallZ(1,10.11,11.89,ET,[{a:10.45,b:11.6,s:2.35,h:3.3}],mat.wall);   // 平台上方高窗
 // 客廳前牆外推，與玄關、神桌區前牆對齊
 wallX(10,7.71,9.385,ET,[LW(7.85,9.25)],mat.wall);
+// Door leaves retain world placement when attached to a hinge or sliding group.
+const tourDoors=[];
+function registerTourDoor(meshes,hinge,angle=0,slide=0){
+  const group=new THREE.Group();group.position.copy(hinge);scene.add(group);group.updateMatrixWorld(true);
+  meshes.forEach(m=>{group.attach(m);m.userData.walkDoor=true;});
+  const door={group,meshes,closed:hinge.clone(),angle,slide,open:false,anchor:new THREE.Vector3()};
+  new THREE.Box3().setFromObject(meshes[0]).getCenter(door.anchor);tourDoors.push(door);return door;
+}
 // v3 ①神明廳獨立隔間：x=9.5 隔牆＋0.9m 木拉門（門上木格柵透氣）
 wallZ(9.5,10.12,11.88,IT,[{a:10.25,b:11.15,s:0,h:2.8,none:true}],mat.iwall);
-box(9.36,9.42,10.25,11.15,FL,FL+2.1,mat.fwood).userData.walkDoor=true;                       // 木拉門（關閉狀態，客廳側）
+registerTourDoor([box(9.36,9.42,10.25,11.15,FL,FL+2.1,mat.fwood)],new THREE.Vector3(-9.39,FL,10.25),0,.95);                       // 木拉門（關閉狀態，客廳側）
 box(9.36,9.42,10.25,11.15,FL+2.1,FL+2.15,mat.fwood);
 for(let z=10.25;z<=11.151;z+=0.15) box(9.47,9.53,z-0.015,z+0.015,FL+2.15,FL+2.8,mat.fwood);   // 木格柵
 
@@ -1925,8 +1933,10 @@ if(doorOak.userData.pbr)doorOak.userData.surfaceScale=[.6,2.4];
       // 雙開門：兩扇相接處不設門柱（na／nb：省略該側門框），門洞中間全開
       if(!o.na) seg(ax,pos,o.a,o.a+f,-t/2,t/2,FL,y1,mJamb); if(!o.nb) seg(ax,pos,o.b-f,o.b,-t/2,t/2,FL,y1,mJamb);
       seg(ax,pos,o.a,o.b,-t/2,t/2,y1-f,y1,mJamb);
-      seg(ax,pos,o.a+(o.na?0.003:f),o.b-(o.nb?0.003:f),-0.02,0.02,FL+0.01,y1-f,mDoor).userData.walkDoor=true;
-      seg(ax,pos,o.hl?o.a+0.1:o.b-0.16,o.hl?o.a+0.16:o.b-0.1,-0.05,0.05,FL+1.0,FL+1.04,mat.steel).userData.walkDoor=true;
+      const leaf=seg(ax,pos,o.a+(o.na?0.003:f),o.b-(o.nb?0.003:f),-0.02,0.02,FL+0.01,y1-f,mDoor);
+      const handle=seg(ax,pos,o.hl?o.a+0.1:o.b-0.16,o.hl?o.a+0.16:o.b-0.1,-0.05,0.05,FL+1.0,FL+1.04,mat.steel);
+      const edge=o.hl?o.b-f:o.a+f;
+      registerTourDoor([leaf,handle],new THREE.Vector3(ax==='x'?-edge:-pos,FL,ax==='x'?pos:edge),(o.hl?-1:1)*(ax==='x'?1:-1)*Math.PI/2);
     }
   });
 })();
@@ -2651,7 +2661,7 @@ new ResizeObserver(resize).observe(viewer); resize();
 // First-person tour: metres, 1.60 m eye height, 0.18 m radius, no jumping.
 const walk={mode:'first',active:false,x:-5.75,z:11.4,y:FL+.015,yaw:Math.PI,pitch:0,last:0,keys:new Set(),stick:{x:0,y:0}};
 const walkBar=document.createElement('div');
-walkBar.innerHTML='<button id="walk-enter">第一人稱看屋</button> <button id="walk-third">小人物看屋</button> <button id="walk-mode" hidden>切換第三人稱</button> <button id="walk-reset" hidden>回到入口</button> <button id="walk-exit" hidden>返回俯視</button> <span id="walk-help" role="status"></span>';
+walkBar.innerHTML='<button id="walk-enter">第一人稱看屋</button> <button id="walk-third">小人物看屋</button> <button id="walk-mode" hidden>切換第三人稱</button> <button id="walk-door" hidden>開門／關門 (E)</button> <button id="walk-reset" hidden>回到入口</button> <button id="walk-exit" hidden>返回俯視</button> <span id="walk-help" role="status"></span>';
 viewer.before(walkBar);
 const walkStyle=document.createElement('style');walkStyle.textContent=`
 #walk-help{font-size:13px} .walk-pad{position:absolute;bottom:18px;width:100px;height:100px;border-radius:50%;background:#ede8deaa;border:2px solid #746b5c;touch-action:none;z-index:8;display:none;align-items:center;justify-content:center;color:#333;user-select:none}
@@ -2666,9 +2676,46 @@ scene.updateMatrixWorld(true);
 const tourMeshes=[];scene.traverse(m=>{if(m.isMesh)tourMeshes.push(m);});
 const tourBounds=tourMeshes.map(m=>({m,b:new THREE.Box3().setFromObject(m)}));
 const ray=new THREE.Raycaster(),down=new THREE.Vector3(0,-1,0);
-function tourVisible(m){for(let p=m;p;p=p.parent){if(!p.visible)return false;}return !m.userData.walkDoor;}
+function tourVisible(m){for(let p=m;p;p=p.parent){if(!p.visible)return false;}return true;}
 // Axis-aligned boxes are used for body collision; sloped stair slabs are floor-only.
 const obstacles=tourMeshes.filter(m=>!m.userData.beam&&m.geometry.type==='BoxGeometry'&&Math.abs(m.rotation.x)+Math.abs(m.rotation.y)+Math.abs(m.rotation.z)<.001).map(m=>({m,b:new THREE.Box3().setFromObject(m)}));
+// Test in door-local space so rotated leaves do not create oversized AABB barriers.
+function doorHitsBody(m,x,z,y){
+  if(!tourVisible(m))return false;
+  const p=m.worldToLocal(new THREE.Vector3(x,y,z)),g=m.geometry.parameters;
+  if(p.y+1.68<=-g.height/2||p.y+.235>=g.height/2)return false;
+  const dx=p.x-Math.max(-g.width/2,Math.min(p.x,g.width/2));
+  const dz=p.z-Math.max(-g.depth/2,Math.min(p.z,g.depth/2));
+  return dx*dx+dz*dz<.18*.18;
+}
+function nearestTourDoor(){
+  if(!walk.active)return null;
+  let best=null,distance=1.5;
+  for(const door of tourDoors){
+    if(!door.meshes.some(tourVisible)||Math.abs(door.anchor.y-(walk.y+1.05))>1.2)continue;
+    const d=Math.hypot(walk.x-door.anchor.x,walk.z-door.anchor.z);
+    if(d<distance){best=door;distance=d;}
+  }return best;
+}
+function applyTourDoor(door,open){
+  door.open=open;door.group.rotation.y=open?door.angle:0;
+  door.group.position.copy(door.closed);if(open)door.group.position.z+=door.slide;
+  door.group.updateMatrixWorld(true);
+  for(const entry of tourBounds)if(door.meshes.includes(entry.m))entry.b.setFromObject(entry.m);
+}
+function toggleTourDoor(){
+  const door=nearestTourDoor();if(!door)return;
+  const previous=door.open;applyTourDoor(door,!previous);
+  if(door.meshes.some(m=>doorHitsBody(m,walk.x,walk.z,walk.y))){
+    applyTourDoor(door,previous);help.textContent='請先離開門片範圍，再按 E 開關門。';return;
+  }
+  setWalkHelp();updateDoorPrompt();walkCamera();
+}
+const doorButton=document.getElementById('walk-door');doorButton.onclick=toggleTourDoor;
+function updateDoorPrompt(){
+  const door=nearestTourDoor();doorButton.hidden=!walk.active;doorButton.disabled=!door;
+  doorButton.textContent=door?(door.open?'E 關門':'E 開門'):'靠近門後按 E';
+}
 function supportedHeight(x,z,y){
   ray.set(new THREE.Vector3(x,y+.235,z),down);ray.far=.49;
   const candidates=tourBounds.filter(({m,b})=>tourVisible(m)&&x>=b.min.x&&x<=b.max.x&&z>=b.min.z&&z<=b.max.z&&b.max.y>=y-.255&&b.min.y<=y+.235).map(v=>v.m);
@@ -2682,10 +2729,11 @@ function canStand(x,z,y){
   if(x>-.2||x< -14.8||z<.3||z>49.7)return false;
   const radius=.18;
   if(y>BT-.3&&x< -5.5+radius&&x> -8.5-radius&&z>13.3-radius&&z<15.3+radius)return false;
-  for(const {m,b} of obstacles){if(!tourVisible(m)||b.max.y<=y+.235||b.min.y>=y+1.68)continue;
+  for(const {m,b} of obstacles){if(m.userData.walkDoor||!tourVisible(m)||b.max.y<=y+.235||b.min.y>=y+1.68)continue;
     const cx=Math.max(b.min.x,Math.min(x,b.max.x)),cz=Math.max(b.min.z,Math.min(z,b.max.z));
     if((x-cx)**2+(z-cz)**2<radius*radius)return false;
   }
+  if(tourDoors.some(d=>d.meshes.some(m=>doorHitsBody(m,x,z,y))))return false;
   // Reject unsupported footprint edges rather than letting visitors fall into the void.
   return [[0,0],[radius,0],[-radius,0],[0,radius],[0,-radius]].every(([a,b])=>supportedHeight(x+a,z+b,y)!==null);
 }
@@ -2741,32 +2789,32 @@ function clearWalkInput(){if(typeof walkMouseDrag!=='undefined')walkMouseDrag=nu
 function resetWalk(){clearWalkInput();Object.assign(walk,{x:-5.75,z:11.4,y:FL+.015,yaw:Math.PI,pitch:0});avatarStride=avatarSwing=0;avatar.rotation.y=walk.yaw;animateAvatar(0,0,0);walkCamera();}
 function enterWalk(mode='first'){
   if(walk.active){setWalkMode(mode);return;}walk.mode=mode;
-  savedWalk={p:camera.position.clone(),t:controls.target.clone(),fov:camera.fov,near:camera.near,roof:roof.visible,rs:rs.visible,doors:tourMeshes.filter(m=>m.userData.walkDoor).map(m=>[m,m.visible])};
+  savedWalk={p:camera.position.clone(),t:controls.target.clone(),fov:camera.fov,near:camera.near,roof:roof.visible,rs:rs.visible};
   anim=null;controls.enabled=false;walk.active=true;roof.visible=true;rs.visible=true;
-  savedWalk.doors.forEach(([m])=>m.visible=false);camera.fov=65;camera.near=.04;camera.updateProjectionMatrix();
+  camera.fov=65;camera.near=.04;camera.updateProjectionMatrix();
   viewer.classList.add('walking');enterButton.hidden=true;exitButton.hidden=resetButton.hidden=false;
   setWalkHelp();
   document.querySelectorAll('[id^="t-"]:not(#t-atrium-daylight)').forEach(b=>{b.dataset.walkDisabled=String(b.disabled);b.disabled=true;});resetWalk();thirdButton.hidden=true;setWalkMode(mode);
 }
 function exitWalk(){
   if(!walk.active)return;walk.active=false;avatar.visible=false;thirdButton.hidden=false;modeButton.hidden=true;clearWalkInput();viewer.classList.remove('walking');
-  savedWalk.doors.forEach(([m,v])=>m.visible=v);roof.visible=savedWalk.roof;rs.visible=savedWalk.rs;
+  tourDoors.forEach(d=>applyTourDoor(d,false));doorButton.hidden=true;roof.visible=savedWalk.roof;rs.visible=savedWalk.rs;
   camera.fov=savedWalk.fov;camera.near=savedWalk.near;camera.updateProjectionMatrix();camera.position.copy(savedWalk.p);controls.target.copy(savedWalk.t);controls.enabled=true;controls.update();
   document.querySelectorAll('[id^="t-"]:not(#t-atrium-daylight)').forEach(b=>{b.disabled=b.dataset.walkDisabled==='true';delete b.dataset.walkDisabled;});
   enterButton.hidden=false;exitButton.hidden=resetButton.hidden=true;help.textContent='';
 }
 const thirdButton=document.getElementById('walk-third'),modeButton=document.getElementById('walk-mode');
-function setWalkMode(mode){walk.mode=mode;walkCamera();modeButton.textContent=mode==='third'?'切換第一人稱':'切換第三人稱';modeButton.hidden=!walk.active;setWalkHelp();}
+function setWalkMode(mode){walk.mode=mode;walkCamera();modeButton.textContent=mode==='third'?'切換第一人稱':'切換第三人稱';modeButton.hidden=!walk.active;setWalkHelp();updateDoorPrompt();}
 thirdButton.onclick=()=>enterWalk('third');modeButton.onclick=()=>setWalkMode(walk.mode==='third'?'first':'third');
 enterButton.onclick=()=>enterWalk('first');exitButton.onclick=exitWalk;resetButton.onclick=resetWalk;
 const walkCodes=['KeyW','KeyA','KeyS','KeyD','ArrowUp','ArrowLeft','ArrowDown','ArrowRight'];
-window.addEventListener('keydown',e=>{if(!walk.active||/INPUT|TEXTAREA|SELECT/.test(e.target.tagName))return;if(e.code==='Escape'){exitWalk();return;}if(walkCodes.includes(e.code)){e.preventDefault();walk.keys.add(e.code);}});
+window.addEventListener('keydown',e=>{if(!walk.active||/INPUT|TEXTAREA|SELECT/.test(e.target.tagName))return;if(e.code==='Escape'){exitWalk();return;}if(e.code==='KeyE'){e.preventDefault();if(!e.repeat)toggleTourDoor();return;}if(walkCodes.includes(e.code)){e.preventDefault();walk.keys.add(e.code);}});
 window.addEventListener('keyup',e=>walk.keys.delete(e.code));window.addEventListener('blur',clearWalkInput);document.addEventListener('visibilitychange',clearWalkInput);
 function turnWalk(dx,dy,sensitivity=.004){
   walk.yaw-=dx*sensitivity;walk.pitch=Math.max(-1.35,Math.min(1.35,walk.pitch-dy*sensitivity));
 }
 function setWalkHelp(){
-  if(walk.active)help.textContent='電腦：WASD／方向鍵行走，按住滑鼠左鍵拖曳轉頭（高靈敏度），放開後可重新拖曳；手機：左手移動、右手滑動轉頭。Esc 返回。';
+  if(walk.active)help.textContent='電腦：WASD／方向鍵行走，靠近門按 E 開門／關門，按住滑鼠左鍵拖曳轉頭（高靈敏度），放開後可重新拖曳；手機：左手移動、右手滑動轉頭，點上方按鈕開關門。Esc 返回。';
 }
 // Each touch surface owns a distinct pointer, so movement continues while turning.
 function bindWalkPointer(el,move){let id=null,start=null,last=null;
@@ -2815,7 +2863,7 @@ function updateWalk(now){
    if(!a&&!b)continue;const x=walk.x+a,z=walk.z+b,y=supportedHeight(x,z,walk.y);
    if(y!==null&&canStand(x,z,y)){walk.x=x;walk.z=z;walk.y=y;}
  }
- animateAvatar(walk.x-startX,walk.z-startZ,dt);walkCamera();
+ animateAvatar(walk.x-startX,walk.z-startZ,dt);walkCamera();updateDoorPrompt();
 }
 
 go('house',true);
