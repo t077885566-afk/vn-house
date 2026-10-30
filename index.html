@@ -1864,10 +1864,12 @@ wallZ(1,10.11,11.89,ET,[{a:10.45,b:11.6,s:2.35,h:3.3}],mat.wall);   // 平台上
 wallX(10,7.71,9.385,ET,[LW(7.85,9.25)],mat.wall);
 // Door leaves retain world placement when attached to a hinge or sliding group.
 const tourDoors=[];
-function registerTourDoor(meshes,hinge,angle=0,slide=0){
-  const group=new THREE.Group();group.position.copy(hinge);scene.add(group);group.updateMatrixWorld(true);
+// slide moves the leaf along `axis` ('z' by default; the 2F terrace doors slide along world x). The group stays under the
+// meshes' own parent (e.g. the roof group), so hiding that group still hides the leaf. `set` links leaves that open together.
+function registerTourDoor(meshes,hinge,angle=0,slide=0,axis='z'){
+  const group=new THREE.Group();group.position.copy(hinge);(meshes[0].parent||scene).add(group);group.updateMatrixWorld(true);
   meshes.forEach(m=>{group.attach(m);m.userData.walkDoor=true;});
-  const door={group,meshes,closed:hinge.clone(),angle,slide,open:false,anchor:new THREE.Vector3()};
+  const door={group,meshes,closed:hinge.clone(),angle,slide,axis,open:false,anchor:new THREE.Vector3(),set:null};
   new THREE.Box3().setFromObject(meshes[0]).getCenter(door.anchor);tourDoors.push(door);return door;
 }
 // v3 ①神明廳獨立隔間：x=9.5 隔牆＋0.9m 木拉門（門上木格柵透氣）
@@ -2049,12 +2051,19 @@ const mCeil=M(0xF4F2EE,{side:THREE.DoubleSide});
   box(0.63,1.03,9.45,9.85,0,0.06,M(0xBDB8AE,{roughness:.9}));                        // 落水承接板（導入地面排水溝）
   // 日式玻璃拉門 ×4（木框、腰板、橫格）＋外側紗門 ×2：前山牆 x 5.6–9.0
   box(5.55,9.05,11.84,12.12,BT,BT+0.12,mPar,R); box(5.55,9.05,11.9,12.1,BT+0.12,BT+0.15,mat.fwood,R); box(5.55,9.05,11.9,12.1,BT+2.2,BT+2.26,mat.fwood,R);   // 止水門檻 12cm＋木門檻
-  function shoji(x0,x1,z){const f=0.05, y0=BT+0.15, y1=BT+2.2;
-    box(x0,x0+f,z-0.022,z+0.022,y0,y1,mat.fwood,R); box(x1-f,x1,z-0.022,z+0.022,y0,y1,mat.fwood,R);
-    box(x0,x1,z-0.022,z+0.022,y1-f,y1,mat.fwood,R); box(x0,x1,z-0.022,z+0.022,y0,y0+0.35,mat.fwood,R);
-    [0.95,1.55].forEach(h=>box(x0+f,x1-f,z-0.012,z+0.012,y0+h,y0+h+0.03,mat.fwood,R));
-    box(x0+f,x1-f,z-0.004,z+0.004,y0+0.35,y1-f,mGs,R).castShadow=false;}
-  [[5.6,6.5,12.04],[6.45,7.35,11.98],[7.25,8.15,12.04],[8.1,9.0,11.98]].forEach(([a,b,z])=>shoji(a,b,z));
+  function shoji(x0,x1,z){const f=0.05, y0=BT+0.15, y1=BT+2.2, parts=[], bx=(...a)=>{const m=box(...a,R);parts.push(m);return m;};
+    bx(x0,x0+f,z-0.022,z+0.022,y0,y1,mat.fwood); bx(x1-f,x1,z-0.022,z+0.022,y0,y1,mat.fwood);
+    bx(x0,x1,z-0.022,z+0.022,y1-f,y1,mat.fwood); bx(x0,x1,z-0.022,z+0.022,y0,y0+0.35,mat.fwood);
+    [0.95,1.55].forEach(h=>bx(x0+f,x1-f,z-0.012,z+0.012,y0+h,y0+h+0.03,mat.fwood));
+    bx(x0+f,x1-f,z-0.004,z+0.004,y0+0.35,y1-f,mGs).castShadow=false;
+    return parts;}
+  const leaves=[[5.6,6.5,12.04],[6.45,7.35,11.98],[7.25,8.15,12.04],[8.1,9.0,11.98]].map(([a,b,z])=>shoji(a,b,z));
+  // 4 片拉門：兩端片固定（外側紗門所在），中間兩片各滑 0.85 m 疊到端片前，開出約 1.6 m 門洞（按 E 開關）
+  const leafCenter=parts=>{const b=new THREE.Box3();parts.forEach(m=>b.expandByObject(m));return b.getCenter(new THREE.Vector3());};
+  const slideB=registerTourDoor(leaves[1],new THREE.Vector3(),0,0.85,'x'), slideC=registerTourDoor(leaves[2],new THREE.Vector3(),0,-0.85,'x');
+  slideB.anchor.copy(leafCenter(leaves[1]));slideC.anchor.copy(leafCenter(leaves[2]));slideB.set=slideC.set=[slideB,slideC];
+  // 前山牆是平面形狀、沒有碰撞；拉門東側補一塊看不見的實牆，關門時才不能從旁邊繞過去（鏡頭射線也不會穿牆）。
+  const gableBlock=box(9.0,12.9,11.94,12.06,BT,BT+2.6,new THREE.MeshBasicMaterial({visible:false}),R);gableBlock.castShadow=gableBlock.receiveShadow=false;
   [[5.6,6.5],[8.1,9.0]].forEach(([a,b])=>{box(a+0.03,b-0.03,11.92,11.925,BT+0.18,BT+2.17,mScr,R).castShadow=false;
     [[a,a+0.03],[b-0.03,b]].forEach(([c,d])=>box(c,d,11.91,11.935,BT+0.15,BT+2.2,mFr,R)); [BT+0.15,BT+2.17].forEach(y=>box(a,b,11.91,11.935,y,y+0.03,mFr,R));});
   // 大門雨遮：二樓樓板外挑 1.5m（常駐顯示）
@@ -2242,16 +2251,18 @@ F(7.3,7.95,21.4,21.8,0.85,0.856,mat.steel); cyl(7.62,21.82,0.02,0.85,1.15,mat.st
 F(6.05,7.85,19.24,20.14,0,0.86,muji.oak);
 F(6.05,7.85,19.24,20.14,0.86,0.9,muji.stone);
 [6.5,6.95,7.4].forEach(x=>F(x-.004,x+.004,19.235,19.247,.12,.84,muji.gap)); F(6.6,7.3,19.39,19.99,0.9,0.905,mat.steel); cyl(6.95,20.06,0.02,0.9,1.2,mat.steel);
-// 主臥／廚房隔牆：長條家電櫃（下櫃＋檯面＋上櫃，長 1.5 m，靠餐桌側）
-F(8.845,9.445,18.15,19.65,0.1,0.81,muji.oak); F(8.865,9.445,18.15,19.65,0,0.1,muji.black);
-F(8.815,9.445,18.13,19.67,0.81,0.85,muji.stone);
-[18.65,19.15].forEach(z=>F(8.839,8.847,z-.004,z+.004,.12,.79,muji.gap));
-F(9.43,9.445,18.15,19.65,0.85,1.5,muji.splash);
-F(9.095,9.445,18.15,19.65,1.5,2.3,muji.cream);
-[18.9].forEach(z=>F(9.089,9.097,z-.004,z+.004,1.52,2.28,muji.gap));
-F(9.0,9.42,18.25,18.75,0.85,1.15,mat.dark);                          // 微波爐
-F(9.05,9.38,18.85,19.15,0.85,1.17,mat.bike);                          // 氣炸鍋
-cyl(9.2,19.4,0.13,0.85,1.08,mat.fwhite);                             // 電鍋
+// 主臥／廚房隔牆：長條家電櫃（下櫃＋檯面＋上櫃，長 1.5 m，靠後門側）
+// 往後門（+z）位移 KZ：讓客廳通廚房的門開到 90° 後，門片末端與櫃頭之間留出人體通道
+const KZ=0.6, KA=18.15+KZ, KB=19.65+KZ;
+F(8.845,9.445,KA,KB,0.1,0.81,muji.oak); F(8.865,9.445,KA,KB,0,0.1,muji.black);
+F(8.815,9.445,KA-.02,KB+.02,0.81,0.85,muji.stone);
+[KA+.5,KA+1.0].forEach(z=>F(8.839,8.847,z-.004,z+.004,.12,.79,muji.gap));
+F(9.43,9.445,KA,KB,0.85,1.5,muji.splash);
+F(9.095,9.445,KA,KB,1.5,2.3,muji.cream);
+[KA+.75].forEach(z=>F(9.089,9.097,z-.004,z+.004,1.52,2.28,muji.gap));
+F(9.0,9.42,KA+.1,KA+.6,0.85,1.15,mat.dark);                          // 微波爐
+F(9.05,9.38,KA+.7,KA+1.0,0.85,1.17,mat.bike);                          // 氣炸鍋
+cyl(9.2,KA+1.25,0.13,0.85,1.08,mat.fwhite);                             // 電鍋
 // 客廳前窗兩側亞麻簾，保留中間採光與既有窗框。
 [7.88,9.12].forEach(x=>{
   for(let i=0;i<5;i++)F(x+i*.022,x+i*.022+.025,10.16+(i%2)*.025,10.19+(i%2)*.025,.05,2.47,muji.linen);
@@ -2698,15 +2709,17 @@ function nearestTourDoor(){
   }return best;
 }
 function applyTourDoor(door,open){
-  door.open=open;door.group.rotation.y=open?door.angle:0;
-  door.group.position.copy(door.closed);if(open)door.group.position.z+=door.slide;
-  door.group.updateMatrixWorld(true);
-  for(const entry of tourBounds)if(door.meshes.includes(entry.m))entry.b.setFromObject(entry.m);
+  for(const d of door.set||[door]){
+    d.open=open;d.group.rotation.y=open?d.angle:0;
+    d.group.position.copy(d.closed);if(open)d.group.position[d.axis]+=d.slide;
+    d.group.updateMatrixWorld(true);
+    for(const entry of tourBounds)if(d.meshes.includes(entry.m))entry.b.setFromObject(entry.m);
+  }
 }
 function toggleTourDoor(){
   const door=nearestTourDoor();if(!door)return;
   const previous=door.open;applyTourDoor(door,!previous);
-  if(door.meshes.some(m=>doorHitsBody(m,walk.x,walk.z,walk.y))){
+  if((door.set||[door]).some(d=>d.meshes.some(m=>doorHitsBody(m,walk.x,walk.z,walk.y)))){
     applyTourDoor(door,previous);help.textContent='請先離開門片範圍，再按 E 開關門。';return;
   }
   setWalkHelp();updateDoorPrompt();walkCamera();
@@ -2764,10 +2777,16 @@ for(const sx of [-1,1]){
 }
 avatarBlob(avatarSkin,0,-.014,-.096,.013,.02,.019,avatarHead,false);                 // nose
 avatarPart(new THREE.BoxGeometry(.032,.006,.006),avatarLip,0,-.045,-.0885,avatarHead,false); // mouth
-const hair=avatarPart(new THREE.SphereGeometry(1,24,14,0,Math.PI*2,0,Math.PI*.4),avatarHair,0,.003,.003,avatarHead);
-hair.scale.set(.0865,.1215,.1045);                                                    // short crop over the crown, hairline above the brows
-avatarBlob(avatarHair,0,-.02,.035,.083,.074,.066,avatarHead);                         // back of the head down to the nape
-for(const sx of [-1,1])avatarBlob(avatarHair,sx*.074,.026,.0,.016,.044,.052,avatarHead,false); // temples above the ears
+// One continuous hair shell: keep only the sphere triangles above a sloped plane, so the hairline sits high on the
+// forehead, just above the ears at the sides, and wraps down over the back of the head (no bare band between pieces).
+const hairGeo=new THREE.SphereGeometry(1,40,28);
+{const pos=hairGeo.attributes.position,idx=hairGeo.index.array,keep=[];
+ for(let k=0;k<idx.length;k+=3){const a=idx[k],b=idx[k+1],c=idx[k+2];
+  const cy=(pos.getY(a)+pos.getY(b)+pos.getY(c))/3,cz=(pos.getZ(a)+pos.getZ(b)+pos.getZ(c))/3;
+  if(cy>=.15-.5*cz)keep.push(a,b,c);}
+ hairGeo.setIndex(keep);}
+const hair=avatarPart(hairGeo,avatarHair,0,.003,.003,avatarHead);
+hair.scale.set(.0865,.1215,.1045);
 const avatarLimbs={},avatarKnees={},avatarElbows={};
 for(const [side,sx] of [['left',-1],['right',1]]){
  // Leg: hip -> thigh -> knee -> shin -> ankle/shoe. All pivots swing about X.

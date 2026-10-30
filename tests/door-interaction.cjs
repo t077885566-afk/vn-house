@@ -4,13 +4,13 @@ const noop=()=>{};function eventTarget(o){const listeners={};o.addEventListener=
 const elements=new Map();function elem(){return eventTarget({style:{},dataset:{},children:[],classList:{add:noop,remove:noop},append:noop,appendChild:noop,before:noop,after:noop,addEventListener:noop,setAttribute:noop,getAttribute:()=> 'false',getContext:()=>ctx,clientWidth:900,clientHeight:600,setPointerCapture:noop});}const document={createElement:elem,createElementNS:elem,head:elem(),documentElement:elem(),getElementById:id=>{if(!elements.has(id))elements.set(id,elem());return elements.get(id)},querySelectorAll:()=>[],addEventListener:noop};
 eventTarget(document);const c={console,document,window:{devicePixelRatio:1,addEventListener:noop},matchMedia:()=>({matches:false,addEventListener:noop}),getComputedStyle:()=>({getPropertyValue:()=> '#eeeeee'}),MutationObserver:class{observe(){}},ResizeObserver:class{observe(){}},requestAnimationFrame:noop,performance:{now:()=>0},localStorage:{getItem:()=>null,setItem:noop},setTimeout:noop};eventTarget(c.window);c.__sunKey="pm";vm.createContext(c);vm.runInContext(scripts.find(s=>s.includes('const e="147"')),c);c.THREE.WebGLRenderer=class{constructor(){this.domElement=elem();this.shadowMap={};this.capabilities={getMaxAnisotropy:()=>8};}setPixelRatio(){}setSize(){}render(){}};
 for(const s of scripts.filter(s=>s.includes('class OrbitControls')||s.includes('// This set of controls')||s.includes('class CSS2DObject')))vm.runInContext(s,c);
-let app=scripts[scripts.length-1].replace('requestAnimationFrame(loop);\n})();','window.test={tourDoors,tourBounds,nearestTourDoor,toggleTourDoor,doorHitsBody,applyTourDoor,doorButton,help,movePad,lookPad,renderer,turnWalk,walk,enterWalk,exitWalk,canStand,supportedHeight,updateWalk,scene,camera,controls};\n})();');vm.runInContext(app,c);const t=c.window.test;assert(t);assert.equal(t.tourDoors.length,11);
+let app=scripts[scripts.length-1].replace('requestAnimationFrame(loop);\n})();','window.test={tourDoors,tourBounds,nearestTourDoor,toggleTourDoor,doorHitsBody,applyTourDoor,doorButton,help,movePad,lookPad,renderer,turnWalk,walk,enterWalk,exitWalk,canStand,supportedHeight,updateWalk,scene,camera,controls};\n})();');vm.runInContext(app,c);const t=c.window.test;assert(t);assert.equal(t.tourDoors.length,13,'11 ground-floor doors + 2 terrace sliding leaves');
 const key=(extra={})=>c.window.fire('keydown',{code:'KeyE',target:{tagName:'CANVAS'},...extra});
 key();assert(t.tourDoors.every(d=>!d.open),'E outside tour ignored');
 t.enterWalk();
 Object.assign(t.walk,{x:t.tourDoors[1].anchor.x,z:t.tourDoors[1].anchor.z,y:4.7});
 assert.equal(t.nearestTourDoor(),null,'cannot operate downstairs doors from upstairs');
-for(const door of t.tourDoors){
+for(const door of t.tourDoors.filter(d=>d.anchor.y<2)){
   const m=door.meshes[0];assert(m.visible,'doors stay visible during tour');
   Object.assign(t.walk,{x:door.anchor.x,z:door.anchor.z+.6,y:.815});
   // Use the free side of each door (axis z leaves need x offset).
@@ -34,4 +34,4 @@ Object.assign(t.walk,{x:-6,z:6,y:.02});key();assert(t.tourDoors.every(d=>!d.open
 t.exitWalk();t.enterWalk('third');const door=t.tourDoors[1];
 Object.assign(t.walk,{x:door.anchor.x,z:door.anchor.z+.6,y:.815});key();assert(door.open);
 t.exitWalk();assert(t.tourDoors.every(d=>!d.open),'overview restores closed doors');assert(t.doorButton.hidden);
-console.log('PASS 11 visible doors, nearest/range/height selection, E toggle, repeat and input guards, open passage, closed collision, close-on-body rejection, refreshed bounds, third-person, overview reset');
+console.log('PASS 11 ground-floor doors (+2 terrace leaves counted), nearest/range/height selection, E toggle, repeat and input guards, open passage, closed collision, close-on-body rejection, refreshed bounds, third-person, overview reset');
