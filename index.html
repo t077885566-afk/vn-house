@@ -2726,41 +2726,56 @@ function bindWalkPointer(el,move){let id=null,start=null,last=null;
  const stop=e=>{if(e.pointerId===id)cancel();};['pointerup','pointercancel','lostpointercapture'].forEach(t=>el.addEventListener(t,stop));
 }
 bindWalkPointer(movePad,true);bindWalkPointer(lookPad,false);bindWalkPointer(renderer.domElement,false);
-// Click-to-look is independent of key order. Acquiring mouse lock must not clear W.
+// Capture raw mouse pointer events before target handlers; no dependency on click synthesis.
 let walkMouseLook=false,walkMouseLast=null;
+const walkInputStats={left:0,moves:0,lastPaint:0};
+const walkInputStatus=document.createElement('span');walkInputStatus.id='walk-input-status';
+walkInputStatus.style.cssText='display:none;font-size:12px;margin-left:8px';walkBar.appendChild(walkInputStatus);
+function paintWalkInput(now=0){
+  if(now&&now-walkInputStats.lastPaint<200)return;walkInputStats.lastPaint=now;
+  walkInputStatus.style.display=walk.active?'inline':'none';
+  walkInputStatus.textContent='輸入 v2｜方向鍵：'+(walk.keys.size?'收到':'未按')+'｜左鍵：'+walkInputStats.left+'｜移動：'+walkInputStats.moves+'｜轉向：'+(walkMouseLook?'開':'關')+'｜鎖定：'+(document.pointerLockElement===renderer.domElement?'是':'否');
+}
 function stopWalkMouseLook(){
   walkMouseLook=false;walkMouseLast=null;
   if(document.pointerLockElement===renderer.domElement&&document.exitPointerLock)document.exitPointerLock();
-  setWalkHelp();
+  setWalkHelp();paintWalkInput();
 }
-renderer.domElement.addEventListener('click',e=>{
-  if(!walk.active||e.button!==0||!matchMedia('(hover:hover) and (pointer:fine)').matches)return;
-  e.preventDefault();
+window.addEventListener('pointerdown',e=>{
+  if(!walk.active||e.pointerType!=='mouse'||e.button!==0||e.target!==renderer.domElement)return;
+  e.preventDefault();walkInputStats.left++;
   if(walkMouseLook){stopWalkMouseLook();return;}
-  walkMouseLook=true;walkMouseLast={x:e.clientX,y:e.clientY};setWalkHelp();
+  walkMouseLook=true;walkMouseLast={x:e.clientX,y:e.clientY};setWalkHelp();paintWalkInput();
   if(renderer.domElement.requestPointerLock){
-    try{const pending=renderer.domElement.requestPointerLock();if(pending&&pending.catch)pending.catch(()=>{if(!walk.active)stopWalkMouseLook();else setWalkHelp();});}catch(error){setWalkHelp();}
+    try{const pending=renderer.domElement.requestPointerLock();if(pending&&pending.catch)pending.catch(()=>{if(!walk.active)stopWalkMouseLook();else paintWalkInput();});}catch(error){paintWalkInput();}
   }
-});
-document.addEventListener('mousemove',e=>{
-  if(!walk.active||!walkMouseLook)return;
-  if(document.pointerLockElement===renderer.domElement){turnWalk(e.movementX||0,e.movementY||0,.009);return;}
-  // If lock is unsupported/denied, keep click-to-look within the viewing canvas.
+},{capture:true,passive:false});
+window.addEventListener('pointermove',e=>{
+  if(!walk.active||e.pointerType!=='mouse')return;
+  walkInputStats.moves++;
+  if(!walkMouseLook||document.pointerLockElement===renderer.domElement)return;
+  // Captured input remains independent of keyboard focus and mouse-button state.
   if(e.target!==renderer.domElement){walkMouseLast=null;return;}
   if(walkMouseLast)turnWalk(e.clientX-walkMouseLast.x,e.clientY-walkMouseLast.y,.009);
   walkMouseLast={x:e.clientX,y:e.clientY};
-});
+},{capture:true,passive:true});
+window.addEventListener('mousemove',e=>{
+  if(walk.active&&walkMouseLook&&document.pointerLockElement===renderer.domElement){
+    turnWalk(e.movementX||0,e.movementY||0,.009);
+  }
+},{capture:true,passive:true});
 document.addEventListener('pointerlockchange',()=>{
   if(document.pointerLockElement===renderer.domElement){
     if(!walk.active||!walkMouseLook){document.exitPointerLock();return;}
     walkMouseLast=null;
   }else if(walkMouseLook){walkMouseLook=false;walkMouseLast=null;}
-  setWalkHelp();
+  setWalkHelp();paintWalkInput();
 });
-document.addEventListener('pointerlockerror',()=>{if(walk.active)setWalkHelp();});
+document.addEventListener('pointerlockerror',()=>{if(walk.active)paintWalkInput();});
 window.addEventListener('blur',stopWalkMouseLook);
 document.addEventListener('visibilitychange',()=>{if(document.hidden)stopWalkMouseLook();});
 function updateWalk(now){
+ paintWalkInput(now);
  const dt=walk.last?Math.min((now-walk.last)/1000,.05):0;walk.last=now;
  const pressed=(a,b)=>walk.keys.has(a)||walk.keys.has(b);
  let forward=Number(pressed('KeyW','ArrowUp'))-Number(pressed('KeyS','ArrowDown'))-walk.stick.y;
