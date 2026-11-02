@@ -15,18 +15,14 @@ function reachable(y,start,goal,box,r){
       if(nx<box[0]||nx>box[1]||nz<box[2]||nz>box[3]||seen.has(id(nx,nz)))continue;seen.add(id(nx,nz));if(ring(nx,nz))q.push([nx,nz]);}}
   return false;
 }
-// Living/dining -> kitchen door (z=17, x 8.4-9.3) swings into the kitchen. With the 1.5 m appliance cabinet on the master-bedroom wall
-// pushed toward the back door, a 0.70 m wide visitor must get through the open door and reach every part of the kitchen.
+// Living/dining -> kitchen: the former 0.9 m door is now a door-less 1.17 m (0.9 x 1.3) opening at z=17, x 8.13-9.30.
+// A 0.70 m wide visitor must walk straight through it and reach every part of the kitchen; nothing is registered as a door there.
 t.enterWalk();
-const door=t.tourDoors.find(d=>Math.abs(d.anchor.x+8.85)<.15&&Math.abs(d.anchor.z-17)<.15);assert(door,'kitchen door registered');
-const Y=.815,box=[-9.45,-4.7,16.0,22.4],start=[-8.88,16.3];
-Object.assign(t.walk,{x:start[0],z:16.4,y:Y});assert.equal(t.nearestTourDoor(),door,'kitchen door selected from the dining side');
-assert(!reachable(Y,start,[-9.0,21.45],box,0),'closed kitchen door blocks');
-key();assert(door.open,'E opens the kitchen door');
-const goals={backDoor:[-9.0,21.45],cabinetAisle:[-8.33,19.7],behindIsland:[-6.9,20.7],westOfIsland:[-5.55,19.7]};
+assert(!t.tourDoors.some(d=>Math.abs(d.anchor.x+8.7)<.6&&Math.abs(d.anchor.z-17)<.15),'no door leaf in the kitchen opening');
+const Y=.815,box=[-9.45,-4.7,16.0,22.4],start=[-8.7,16.3];
+const goals={backDoor:[-9.0,21.45],cabinetAisle:[-8.33,19.7],dinnerTable:[-6.9,18.3],westOfTable:[-5.55,19.7]};
 for(const [name,goal] of Object.entries(goals)){
-  assert(reachable(Y,start,goal,box,.17),'0.70 m wide visitor reaches '+name+' with the door open');
+  assert(reachable(Y,start,goal,box,.17),'0.70 m wide visitor reaches '+name+' through the opening');
 }
-key();assert(!door.open,'E closes it again');
 t.exitWalk();
-console.log('PASS kitchen door opens into the kitchen; 0.70 m body reaches back door, cabinet aisle, behind and west of the island');
+console.log('PASS kitchen opening has no door; 0.70 m body reaches back door, cabinet aisle, dining table and west side');
