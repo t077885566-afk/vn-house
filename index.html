@@ -1566,15 +1566,19 @@ try{matchMedia('(prefers-color-scheme: dark)').addEventListener('change',setBg);
 new MutationObserver(setBg).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
 
 // 燈光
-const hemi=new THREE.HemisphereLight(0xFFF5E8,0x8a8670,0.75); scene.add(hemi);   // 強度於環境光建立後校正（ENV_HEMI）
-const sun=new THREE.DirectionalLight(0xFFF1DE,0.85);
+const SKY_DAY=0xEAF0FF,GROUND_DAY=0x9A8466,SUN_DAY=0xFFE6C4;   // 冷天光＋暖地面反彈＋暖色主光
+const hemi=new THREE.HemisphereLight(SKY_DAY,GROUND_DAY,0.75); scene.add(hemi);   // 強度於環境光建立後校正（ENV_HEMI）
+const sun=new THREE.DirectionalLight(SUN_DAY,0.85);
 sun.target.position.set(-7.5,0,25);
+// 補光（冷藍、無陰影，位於主光對側）與輪廓光（冷白，跟著鏡頭背後，只在日間外觀使用）
+const fillL=new THREE.DirectionalLight(0xBBD0FF,0.16);fillL.target=sun.target;scene.add(fillL);
+const rimL=new THREE.DirectionalLight(0xD6E4FF,0.14);rimL.target=sun.target;scene.add(rimL);
 // 方位：大門朝向方位角約 326°（西北偏北）。bearing θ 的水平方向向量：
 const FRONT_BEARING=326;
 function dirOf(b){const r=(b-FRONT_BEARING)*Math.PI/180; return new THREE.Vector3(Math.sin(r),0,-Math.cos(r));}
 const SUN={am:{b:100,e:35,t:'上午'},noon:{b:180,e:72,t:'中午'},pm:{b:255,e:35,t:'下午'}};
 function setSun(k){const v=SUN[k], d=dirOf(v.b).multiplyScalar(Math.cos(v.e*Math.PI/180)); d.y=Math.sin(v.e*Math.PI/180);
-  sun.position.copy(sun.target.position).addScaledVector(d,40); sun.intensity=window.__night?0.07:(k==='noon'?0.95:0.8);if(scene.userData.syncAtriumDaylight)scene.userData.syncAtriumDaylight(k);}
+  sun.position.copy(sun.target.position).addScaledVector(d,40);fillL.position.set(sun.target.position.x-d.x*30,18,sun.target.position.z-d.z*30);fillL.intensity=window.__night?0:.16; sun.intensity=window.__night?0.07:(k==='noon'?0.95:0.8);if(scene.userData.syncAtriumDaylight)scene.userData.syncAtriumDaylight(k);}
 setSun('pm');
 sun.castShadow=true; sun.shadow.mapSize.set(2048,2048);
 Object.assign(sun.shadow.camera,{left:-32,right:32,top:32,bottom:-32,near:1,far:90});
@@ -1583,6 +1587,7 @@ scene.add(sun); scene.add(sun.target);
 
 // 平面座標 (x: 0–15 由左至右, z: 0–50 由路往後) → three 座標 x 取負，讓從路面看時左右正確
 const M=(c,o)=>new THREE.MeshStandardMaterial(Object.assign({color:c,roughness:.9,metalness:0},o||{}));
+const MP=(c,o)=>new THREE.MeshPhysicalMaterial(Object.assign({color:c,roughness:.9,metalness:0},o||{}));   // 具透明塗層的清漆／陶瓷／石材
 // ===== 材質升級 v2：原創 PBR 貼圖（色彩＋粗糙度＋法線）＋環境光反射 =====
 // 貼圖由 tools/gen_textures.py 產生並嵌入 window.__VN_TEX；缺少時退回下方第一輪程序式貼圖。
 const VN_TEX=(typeof window!=='undefined'&&window.__VN_TEX)||null;
@@ -1630,11 +1635,11 @@ const mat={
   tile:M(0xF2EEE6,{roughness:.35}), bathTile:M(0xBFD6DE), wall:M(0xEEEAE0), iwall:M(0xF0ECE4),
   struct:M(0xC2621F), roof:M(0xB5563A,{side:THREE.DoubleSide}), gable:M(0xEEEAE0,{side:THREE.DoubleSide}),
   fence:M(0xD8D3C8), wood:M(0xA8712F), mesh:M(0x5E5E55,{transparent:true,opacity:.28,side:THREE.DoubleSide}),
-  tree:M(0x4E8A3A), trunk:M(0x6B4A2E), car:M(0x4A6380,{roughness:.5}), glass:M(0x2B3540,{roughness:.3}),
+  tree:M(0x4E8A3A), trunk:M(0x6B4A2E), car:MP(0x4A6380,{roughness:.42,clearcoat:.8,clearcoatRoughness:.12}), glass:M(0x2B3540,{roughness:.3}),
   tire:M(0x222222), bike:M(0x2F3A44,{roughness:.6}), metal:M(0x9AA3A8,{roughness:.6}),
   genkan:M(0x8F887C), fwood:M(0xD2B48C), fwhite:M(0xF4F2EC), bedding:M(0xF7F5EF), pillow:M(0xE2DCCF),
   fabric:M(0x8E9488), rug:M(0xD8CDB8), dark:M(0x1E1F22,{roughness:.4}), counter:M(0xDCD6CA), steel:M(0xA9AEB2,{roughness:.34,metalness:.8}),
-  ceramic:M(0xFFFFFF,{roughness:.3}), altar:M(0x5A2E1A,{roughness:.45}), brass:M(0xC9A24A,{roughness:.35,metalness:.6}), fruit:M(0xD9822B), redmat:M(0x9E2B25), showerGlass:M(0xBFDCE8,{transparent:true,opacity:.35,roughness:.1}), stairM:M(0x5D6166,{roughness:.6})
+  ceramic:MP(0xFFFFFF,{roughness:.28,clearcoat:.6,clearcoatRoughness:.08}), altar:MP(0x5A2E1A,{roughness:.5,clearcoat:.5,clearcoatRoughness:.25}), brass:M(0xC9A24A,{roughness:.35,metalness:.6}), fruit:M(0xD9822B), redmat:M(0x9E2B25), showerGlass:M(0xBFDCE8,{transparent:true,opacity:.35,roughness:.1}), stairM:M(0x5D6166,{roughness:.6})
 };
 const STRUCT_ON=0xC2621F, STRUCT_OFF=0xA7A398;
 
@@ -2167,7 +2172,7 @@ const muji={
   oak:M(MUJI.oak,{map:mujiTexture('oak'),roughness:.68}),
   fabric:M(MUJI.fabric,{map:mujiTexture('linen'),roughness:.94}),
   linen:M(MUJI.linen,{map:mujiTexture('linen'),roughness:.95,side:THREE.DoubleSide}),
-  cream:M(MUJI.cream,{roughness:.82}),stone:M(MUJI.stone,{map:mujiTexture('stone'),roughness:.45}),
+  cream:M(MUJI.cream,{roughness:.82}),stone:MP(MUJI.stone,{map:mujiTexture('stone'),roughness:.45,clearcoat:.3,clearcoatRoughness:.2}),
   splash:M(MUJI.splash,{roughness:.75}),wall:M(MUJI.wall,{roughness:.93}),
   ceiling:M(MUJI.ceiling,{roughness:.95}),black:M(MUJI.black,{roughness:.55,metalness:.15})
 };
@@ -2547,9 +2552,9 @@ rs.traverse(mesh=>{
 });
 let nightOn=false;
 function setNight(on){nightOn=on; window.__night=on;
-  hemi.intensity=on?0.16:ENV_HEMI; hemi.color.setHex(on?0x7F93C9:0xFFF5E8); scene.environment=on?null:envTexture; hemi.groundColor.setHex(on?0x1A1C24:0x8A8670);
-  sun.color.setHex(on?0x9FB4FF:0xFFF1DE); sun.intensity=on?0.07:(window.__sunKey==='noon'?0.95:0.8);
-  LAMPS.forEach(l=>l.visible=on); mLamp.emissiveIntensity=on?1.8:0; mLampN.emissiveIntensity=on?1.8:0;
+  hemi.intensity=on?0.16:ENV_HEMI; hemi.color.setHex(on?0x7F93C9:SKY_DAY); scene.environment=on?null:envTexture; hemi.groundColor.setHex(on?0x1A1C24:GROUND_DAY);
+  sun.color.setHex(on?0x9FB4FF:SUN_DAY); sun.intensity=on?0.07:(window.__sunKey==='noon'?0.95:0.8);
+  fillL.intensity=on?0:.16;rimL.visible=!on;LAMPS.forEach(l=>l.visible=on); mLamp.emissiveIntensity=on?1.8:0; mLampN.emissiveIntensity=on?1.8:0;
   if(on) scene.background=new THREE.Color(0x0B1220); else setBg();
   if(scene.userData.syncAtriumDaylight)scene.userData.syncAtriumDaylight();}
 
@@ -2601,12 +2606,83 @@ toggle('t-furn',on=>{furn.visible=on;});
 toggle('t-night',on=>setNight(on));
 (function(){const order=['am','noon','pm']; let i=2; const b=document.getElementById('t-sun');
   window.__sunKey='pm'; b.addEventListener('click',()=>{i=(i+1)%3; setSun(order[i]); window.__sunKey=order[i]; applyLang();});})();
+// ===== 寫實質感 v3：倒角、程式化雜訊、接觸陰影 =====
+// 1) 幾何倒角：以位移頂點把 BoxGeometry 變成圓角盒（外包尺寸與碰撞不變，仍是 BoxGeometry）。
+function roundBox(mesh,r){
+  const P=mesh.geometry.parameters,w=P.width,h=P.height,d=P.depth;
+  const g=new THREE.BoxGeometry(w,h,d,3,3,3),p=g.attributes.position,n=g.attributes.normal,uv=g.attributes.uv;
+  const hx=w/2,hy=h/2,hz=d/2,e=1e-6,v=new THREE.Vector3(),c=new THREE.Vector3();
+  const inner=(a,half)=>Math.abs(Math.abs(a)-half)<e?a:Math.sign(a)*(half-r);
+  const q=(t,L)=>{const i=Math.round(t*3);return i===0?0:i===3?1:i===1?r/L:1-r/L;};
+  for(let i=0;i<p.count;i++){
+    const nx=Math.abs(n.getX(i)),ny=Math.abs(n.getY(i));
+    const [Lu,Lv]=nx>.5?[d,h]:ny>.5?[w,d]:[w,h];
+    uv.setXY(i,q(uv.getX(i),Lu),q(uv.getY(i),Lv));
+    v.set(inner(p.getX(i),hx),inner(p.getY(i),hy),inner(p.getZ(i),hz));
+    c.set(Math.max(-(hx-r),Math.min(hx-r,v.x)),Math.max(-(hy-r),Math.min(hy-r,v.y)),Math.max(-(hz-r),Math.min(hz-r,v.z)));
+    v.sub(c);
+    if(v.lengthSq()>1e-12){v.normalize();p.setXYZ(i,c.x+v.x*r,c.y+v.y*r,c.z+v.z*r);n.setXYZ(i,v.x,v.y,v.z);}
+  }
+  p.needsUpdate=true;n.needsUpdate=true;uv.needsUpdate=true;g.computeBoundingBox();g.computeBoundingSphere();
+  mesh.geometry.dispose();mesh.geometry=g;
+}
+const NO_BEVEL=new Set([mat.glass,mat.mesh,mat.showerGlass,mat.tire,muji.linen,muji.wall,muji.ceiling,muji.gap]);
+function bevelEligible(m){
+  if(!m.isMesh||m.geometry.type!=='BoxGeometry'||m.userData.beam||Array.isArray(m.material))return false;
+  const mt=m.material;if(NO_BEVEL.has(mt)||mt.transparent||mt.side===THREE.DoubleSide)return false;
+  const P=m.geometry.parameters,min=Math.min(P.width,P.height,P.depth),max=Math.max(P.width,P.height,P.depth);
+  if(min<.024||max>3.2)return false;
+  for(let p=m.parent;p;p=p.parent)if(p===furn)return true;   // 只處理家具；牆、樑、屋頂與地坪維持銳利結構
+  return mt===doorOak;                                       // 門片也做圓角
+}
+let bevelCount=0;
+scene.traverse(m=>{if(bevelEligible(m)){roundBox(m,Math.min(.012,Math.min(m.geometry.parameters.width,m.geometry.parameters.height,m.geometry.parameters.depth)*.22));bevelCount++;}});
+// 2) 程式化雜訊：隱藏 Canvas 產生細粒＋低頻斑塊，當作 roughnessMap／bumpMap，打破純色塑膠感。
+function noiseTexture(seed,mean,amp,blotch){
+  const S=128,cv=document.createElement('canvas');cv.width=cv.height=S;const cx=cv.getContext('2d'),im=cx.createImageData(S,S);
+  let s=seed;const rnd=()=>(s=(s*1664525+1013904223)>>>0)/4294967296;
+  const low=new Float32Array(16*16);for(let i=0;i<low.length;i++)low[i]=rnd()-.5;
+  for(let y=0;y<S;y++)for(let x=0;x<S;x++){
+    const fx=x/8,fy=y/8,x0=Math.floor(fx)&15,y0=Math.floor(fy)&15,x1=(x0+1)&15,y1=(y0+1)&15,tx=fx-Math.floor(fx),ty=fy-Math.floor(fy);
+    const b=(low[y0*16+x0]*(1-tx)+low[y0*16+x1]*tx)*(1-ty)+(low[y1*16+x0]*(1-tx)+low[y1*16+x1]*tx)*ty;
+    const val=Math.max(0,Math.min(255,(mean+(rnd()-.5)*amp+b*blotch)*255)),k=(y*S+x)*4;
+    im.data[k]=im.data[k+1]=im.data[k+2]=val;im.data[k+3]=255;
+  }
+  cx.putImageData(im,0,0);const t=new THREE.CanvasTexture(cv);t.wrapS=t.wrapT=THREE.RepeatWrapping;return t;
+}
+const noiseRough=noiseTexture(7,.9,.16,.2),noiseBump=noiseTexture(19,.5,.7,.3);
+const NOISY=[mat.fwood,mat.fwhite,mat.bedding,mat.pillow,mat.fabric,mat.rug,mat.dark,mat.altar,mat.car,mat.bike,mat.metal,mat.counter,
+  muji.cream,muji.black,mat.plinth,mat.pave,mat.fence,mat.genkan].filter(m=>m&&!m.map&&!m.roughnessMap&&!m.userData.pbr&&!m.userData.surfaceScale);
+NOISY.forEach(m=>{m.roughnessMap=noiseRough;m.bumpMap=noiseBump;m.bumpScale=m===mat.fabric||m===mat.rug||m===mat.bedding||m===mat.pillow?.0014:.0005;
+  m.userData.surfaceScale=[.32,.32];m.needsUpdate=true;});
+// 3) 接觸陰影：地面家具底部加一層柔和暗邊（合併成單一網格，不參與碰撞與射線）。
+(function(){
+  const cv=document.createElement('canvas');cv.width=cv.height=64;const cx=cv.getContext('2d');
+  const im=cx.createImageData(64,64);
+  for(let y=0;y<64;y++)for(let x=0;x<64;x++){const dx=Math.abs(x-31.5)/32,dy=Math.abs(y-31.5)/32,k=(y*64+x)*4;
+    const a=Math.max(0,1-Math.max(dx,dy)),v=Math.pow(Math.min(1,a/.45),1.6);im.data[k]=im.data[k+1]=im.data[k+2]=0;im.data[k+3]=Math.round(v*255);}
+  cx.putImageData(im,0,0);const tex=new THREE.CanvasTexture(cv);
+  const pos=[],uvs=[],idx=[],pad=.07,box3=new THREE.Box3();
+  furn.updateMatrixWorld(true);
+  furn.traverse(m=>{
+    if(!m.isMesh||m.geometry.type!=='BoxGeometry'||Array.isArray(m.material)||m.material.transparent)return;
+    box3.setFromObject(m);const sz=box3.getSize(new THREE.Vector3());
+    if(Math.abs(box3.min.y-FL)>.03||sz.x<.12||sz.z<.12||sz.y<.08)return;   // 只處理站在一樓地坪上的物件
+    const y=FL+.013,a=box3.min.x-pad,b=box3.max.x+pad,c=box3.min.z-pad,d=box3.max.z+pad,i=pos.length/3;
+    pos.push(a,y,c, b,y,c, b,y,d, a,y,d);uvs.push(0,0,1,0,1,1,0,1);idx.push(i,i+2,i+1,i,i+3,i+2);
+  });
+  if(!pos.length)return;
+  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));
+  g.setAttribute('uv',new THREE.Float32BufferAttribute(uvs,2));g.setIndex(idx);
+  const cs=new THREE.Mesh(g,new THREE.MeshBasicMaterial({map:tex,color:0x2a2218,transparent:true,opacity:.34,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-2}));
+  cs.userData.fx=true;cs.renderOrder=1;cs.raycast=()=>{};furn.add(cs);window.__contactShadow=cs;
+})();
 // 幾何尺寸不變；只更新客廳／餐廚的貼圖座標。
 scene.traverse(mesh=>{
   if(!mesh.isMesh||Array.isArray(mesh.material))return;
   physicalBoxUV(mesh);
 });
-const detailMaterials=[floorMaterials.tile,doorOak,...new Set(Object.values(muji))];
+const detailMaterials=[floorMaterials.tile,doorOak,...new Set(Object.values(muji)),...NOISY];
 const detailState=detailMaterials.map(material=>({material,map:material.map,color:material.color.getHex(),
   roughness:material.roughness,roughnessMap:material.roughnessMap,normalMap:material.normalMap,bumpMap:material.bumpMap,bumpScale:material.bumpScale}));
 // 關閉細緻材質時，v2 PBR 材質退回貼圖前的平均色。
@@ -2680,7 +2756,7 @@ movePad.className='walk-pad move';movePad.textContent='拖曳移動';lookPad.cla
 const enterButton=document.getElementById('walk-enter'),exitButton=document.getElementById('walk-exit'),resetButton=document.getElementById('walk-reset'),help=document.getElementById('walk-help');
 let savedWalk=null;
 scene.updateMatrixWorld(true);
-const tourMeshes=[];scene.traverse(m=>{if(m.isMesh)tourMeshes.push(m);});
+const tourMeshes=[];scene.traverse(m=>{if(m.isMesh&&!m.userData.fx)tourMeshes.push(m);});
 const tourBounds=tourMeshes.map(m=>({m,b:new THREE.Box3().setFromObject(m)}));
 const ray=new THREE.Raycaster(),down=new THREE.Vector3(0,-1,0);
 function tourVisible(m){for(let p=m;p;p=p.parent){if(!p.visible)return false;}return true;}
@@ -2935,6 +3011,7 @@ function loop(now){
   if(anim){let k=Math.min(1,(now-anim.start)/anim.dur); const e=k<.5?2*k*k:1-Math.pow(-2*k+2,2)/2;
     camera.position.lerpVectors(anim.p0,anim.p1,e); controls.target.lerpVectors(anim.t0,anim.t1,e); if(k>=1) anim=null;}
   if(walk.active) updateWalk(now); else controls.update();
+  rimL.position.set(controls.target.x+(controls.target.x-camera.position.x)*3,12,controls.target.z+(controls.target.z-camera.position.z)*3);
   updCompass(); renderer.render(scene,camera); labelR.render(scene,camera);
 }
 requestAnimationFrame(loop);
